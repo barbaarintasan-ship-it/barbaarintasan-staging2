@@ -1,1 +1,0 @@
-# Barbaarintasan Academy

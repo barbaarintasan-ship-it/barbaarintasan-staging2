@@ -1,8 +1,17 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParentAuth } from "@/contexts/ParentAuthContext";
-import { ArrowLeft, Video, Calendar, Clock, Users, CheckCircle, ExternalLink, Play, Lock } from "lucide-react";
+import { ArrowLeft, Video, Calendar, Clock, Users, CheckCircle, ExternalLink, Play, Lock, X } from "lucide-react";
 import { Link } from "wouter";
 import BottomNav from "@/components/BottomNav";
+
+function getGoogleDriveEmbedUrl(url: string): string | null {
+  const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (match) {
+    return `https://drive.google.com/file/d/${match[1]}/preview`;
+  }
+  return null;
+}
 
 interface LiveEvent {
   id: string;
@@ -35,6 +44,7 @@ interface Enrollment {
 export default function Events() {
   const { parent } = useParentAuth();
   const queryClient = useQueryClient();
+  const [playingEventId, setPlayingEventId] = useState<string | null>(null);
 
   const { data: events = [] } = useQuery<LiveEvent[]>({
     queryKey: ["liveEvents"],
@@ -238,17 +248,52 @@ export default function Events() {
                       <h3 className="font-semibold text-gray-700">{event.title}</h3>
                       <p className="text-xs text-gray-500 mt-1">{formatDate(event.scheduledAt)}</p>
                       {event.recordingUrl && (
-                        <a
-                          href={event.recordingUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 mt-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
-                          data-testid={`link-recording-${event.id}`}
-                        >
-                          <Play className="w-4 h-4" />
-                          Daawo Recording-ka
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
+                        <>
+                          {playingEventId === event.id ? (
+                            <div className="mt-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-gray-700">Recording-ka</span>
+                                <button
+                                  onClick={() => setPlayingEventId(null)}
+                                  className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center"
+                                  data-testid={`button-close-player-${event.id}`}
+                                >
+                                  <X className="w-4 h-4 text-gray-600" />
+                                </button>
+                              </div>
+                              {getGoogleDriveEmbedUrl(event.recordingUrl) ? (
+                                <div className="relative w-full rounded-xl overflow-hidden bg-black" style={{ paddingBottom: "56.25%" }}>
+                                  <iframe
+                                    src={getGoogleDriveEmbedUrl(event.recordingUrl)!}
+                                    className="absolute top-0 left-0 w-full h-full"
+                                    allow="autoplay; encrypted-media"
+                                    allowFullScreen
+                                    data-testid={`video-player-${event.id}`}
+                                  />
+                                </div>
+                              ) : (
+                                <a
+                                  href={event.recordingUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                  Fur Recording-ka
+                                </a>
+                              )}
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setPlayingEventId(event.id)}
+                              className="inline-flex items-center gap-1 mt-2 text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-all"
+                              data-testid={`button-play-${event.id}`}
+                            >
+                              <Play className="w-4 h-4" />
+                              Daawo Recording-ka
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>

@@ -1,9 +1,12 @@
 // Google Drive Integration for Maktabada (Library)
+// Supports both Replit connector (development) and standalone OAuth (Fly.io production)
 import { google } from 'googleapis';
 
 const MAKTABADA_FOLDER_NAME = "Barbaarintasan Maktabada";
 
-async function getAccessToken() {
+let cachedOAuthToken: { token: string; expiresAt: number } | null = null;
+
+async function getAccessTokenViaReplit(): Promise<string> {
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY 
     ? 'repl ' + process.env.REPL_IDENTITY 
@@ -11,12 +14,11 @@ async function getAccessToken() {
     ? 'depl ' + process.env.WEB_REPL_RENEWAL 
     : null;
 
-  if (!xReplitToken) {
-    console.error('[Google Drive] X_REPLIT_TOKEN not found');
-    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
+  if (!xReplitToken || !hostname) {
+    throw new Error('Replit connector not available');
   }
 
-  console.log('[Google Drive] Fetching connection settings...');
+  console.log('[Google Drive] Fetching connection settings via Replit...');
   
   const response = await fetch(
     'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=google-drive',
@@ -34,22 +36,96 @@ async function getAccessToken() {
   const accessToken = connectionSettings?.settings?.access_token || connectionSettings?.settings?.oauth?.credentials?.access_token;
 
   if (!connectionSettings || !accessToken) {
-    console.error('[Google Drive] Not connected or no access token');
-    throw new Error('Google Drive not connected');
+    throw new Error('Google Drive not connected via Replit');
   }
   
   return accessToken;
 }
 
-async function getDriveClient() {
-  const accessToken = await getAccessToken();
+async function getAccessTokenViaOAuth(): Promise<string> {
+  if (cachedOAuthToken && Date.now() < cachedOAuthToken.expiresAt) {
+    return cachedOAuthToken.token;
+  }
 
+  const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
+  const refreshToken = process.env.GOOGLE_DRIVE_REFRESH_TOKEN || process.env.GOOGLE_CALENDAR_REFRESH_TOKEN;
+
+  if (!clientId || !clientSecret || !refreshToken) {
+    throw new Error('Google Drive OAuth credentials not configured');
+  }
+
+  console.log('[Google Drive] Refreshing access token via OAuth...');
+  
+  const oauth2Client = new google.auth.OAuth2(clientId, clientSecret);
+  oauth2Client.setCredentials({ refresh_token: refreshToken });
+  
+  const { credentials } = await oauth2Client.refreshAccessToken();
+  
+  if (!credentials.access_token) {
+    throw new Error('Failed to refresh Google Drive access token');
+  }
+
+  cachedOAuthToken = {
+    token: credentials.access_token,
+    expiresAt: (credentials.expiry_date || Date.now() + 3500000) - 60000
+  };
+  
+  console.log('[Google Drive] Got fresh access token via OAuth');
+  return credentials.access_token;
+}
+
+export async function getAccessToken(): Promise<string> {
+  const isReplit = !!(process.env.REPL_IDENTITY || process.env.WEB_REPL_RENEWAL);
+  
+  if (isReplit) {
+    try {
+      return await getAccessTokenViaReplit();
+    } catch (err) {
+      console.log('[Google Drive] Replit connector failed, trying OAuth fallback...');
+    }
+  }
+  
+  return await getAccessTokenViaOAuth();
+}
+
+async function getDriveClientViaReplit() {
+  const accessToken = await getAccessTokenViaReplit();
   const oauth2Client = new google.auth.OAuth2();
-  oauth2Client.setCredentials({
-    access_token: accessToken
-  });
-
+  oauth2Client.setCredentials({ access_token: accessToken });
   return google.drive({ version: 'v3', auth: oauth2Client });
+}
+
+async function getDriveClientViaOAuth() {
+  const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
+  const refreshToken = process.env.GOOGLE_DRIVE_REFRESH_TOKEN || process.env.GOOGLE_CALENDAR_REFRESH_TOKEN;
+
+  if (!clientId || !clientSecret || !refreshToken) {
+    throw new Error('Google Drive OAuth credentials not configured');
+  }
+
+  const oauth2Client = new google.auth.OAuth2(clientId, clientSecret);
+  oauth2Client.setCredentials({ refresh_token: refreshToken });
+  
+  const { credentials } = await oauth2Client.refreshAccessToken();
+  oauth2Client.setCredentials(credentials);
+  
+  return google.drive({ version: 'v3', auth: oauth2Client });
+}
+
+async function getDriveClient() {
+  const isReplit = !!(process.env.REPL_IDENTITY || process.env.WEB_REPL_RENEWAL);
+  
+  if (isReplit) {
+    try {
+      return await getDriveClientViaReplit();
+    } catch (err) {
+      console.log('[Google Drive] Replit connector failed for Drive client, trying OAuth fallback...');
+    }
+  }
+  
+  return await getDriveClientViaOAuth();
 }
 
 export interface DriveFile {
@@ -214,6 +290,103 @@ export async function getDirectDownloadUrl(fileId: string): Promise<string | nul
     return `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&access_token=${accessToken}`;
   } catch (error) {
     console.error('[Google Drive] Error getting direct download URL:', error);
+    return null;
+  }
+}
+
+export async function getVideoFileMetadata(fileId: string): Promise<{ name: string; mimeType: string; size: number } | null> {
+  try {
+    const drive = await getDriveClient();
+    const fileInfo = await drive.files.get({
+      fileId,
+      fields: 'name, mimeType, size'
+    });
+    return {
+      name: fileInfo.data.name || 'video.mp4',
+      mimeType: fileInfo.data.mimeType || 'video/mp4',
+      size: parseInt(fileInfo.data.size || '0', 10)
+    };
+  } catch (error) {
+    console.error('[Google Drive] Error getting video metadata:', fileId, error);
+    return null;
+  }
+}
+
+export async function streamVideoFile(fileId: string, rangeHeader?: string): Promise<{ stream: NodeJS.ReadableStream; mimeType: string; size: number; start?: number; end?: number; isPartial: boolean } | null> {
+  try {
+    const drive = await getDriveClient();
+
+    const fileInfo = await drive.files.get({
+      fileId,
+      fields: 'name, mimeType, size'
+    });
+    const fileSize = parseInt(fileInfo.data.size || '0', 10);
+    const mimeType = fileInfo.data.mimeType || 'video/mp4';
+    console.log('[Google Drive] Video file:', fileInfo.data.name, 'size:', fileSize, 'mime:', mimeType);
+
+    if (rangeHeader && fileSize > 0) {
+      const rangeMatch = rangeHeader.match(/bytes=(\d*)-(\d*)/);
+      if (rangeMatch) {
+        let start: number;
+        let end: number;
+
+        if (rangeMatch[1] === "" && rangeMatch[2] !== "") {
+          const suffixLength = parseInt(rangeMatch[2], 10);
+          start = Math.max(0, fileSize - suffixLength);
+          end = fileSize - 1;
+        } else {
+          start = parseInt(rangeMatch[1], 10);
+          end = rangeMatch[2] ? parseInt(rangeMatch[2], 10) : fileSize - 1;
+        }
+
+        if (start >= fileSize || end >= fileSize || start > end) {
+          return null;
+        }
+
+        const accessToken = await getAccessToken();
+        const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Range': `bytes=${start}-${end}`
+          }
+        });
+
+        if (!response.ok && response.status !== 206) {
+          console.error('[Google Drive] Range request failed:', response.status, response.statusText);
+          return null;
+        }
+
+        const webStream = response.body;
+        if (!webStream) return null;
+        const { Readable } = await import('stream');
+        const nodeStream = Readable.fromWeb(webStream as any);
+
+        return {
+          stream: nodeStream,
+          mimeType,
+          size: fileSize,
+          start,
+          end,
+          isPartial: true
+        };
+      }
+    }
+
+    const response = await drive.files.get(
+      { fileId, alt: 'media' },
+      { responseType: 'stream' }
+    );
+
+    return {
+      stream: response.data as unknown as NodeJS.ReadableStream,
+      mimeType,
+      size: fileSize,
+      isPartial: false
+    };
+  } catch (error) {
+    console.error('[Google Drive] Error streaming video file:', fileId, error);
     return null;
   }
 }
