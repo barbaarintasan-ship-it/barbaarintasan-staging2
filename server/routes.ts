@@ -8137,12 +8137,12 @@ Return a JSON object with:
     }
   });
 
-  // Google Calendar OAuth flow (one-time use to get refresh token)
+  // Google OAuth flow - unified for Calendar and Drive
   const { google: googleapis } = await import('googleapis');
   const googleOAuth2Client = new googleapis.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    `${process.env.APP_URL || 'https://appbarbaarintasan.com'}/api/google/callback`
+    `${process.env.APP_URL || 'https://appbarbaarintasan.com'}/oauth/callback`
   );
 
   app.get("/api/google/auth", requireAuth, (req: Request, res: Response) => {
@@ -8154,7 +8154,17 @@ Return a JSON object with:
     res.redirect(url);
   });
 
-  app.get("/api/google/callback", async (req: Request, res: Response) => {
+  app.get("/admin/setup-drive", requireAuth, (req: Request, res: Response) => {
+    const url = googleOAuth2Client.generateAuthUrl({
+      access_type: "offline",
+      prompt: "consent",
+      login_hint: "info@visitnordicfi.com",
+      scope: ["https://www.googleapis.com/auth/drive.readonly"],
+    });
+    res.redirect(url);
+  });
+
+  app.get("/oauth/callback", async (req: Request, res: Response) => {
     try {
       const { code, scope } = req.query;
       if (!code) {
@@ -8182,17 +8192,6 @@ Return a JSON object with:
       console.error("[OAuth] callback error:", error);
       res.status(500).send("Failed to complete OAuth flow. Check server logs.");
     }
-  });
-
-  // Google Drive OAuth flow - uses same redirect URI as Calendar (/api/google/callback)
-  app.get("/admin/setup-drive", requireAuth, (req: Request, res: Response) => {
-    const url = googleOAuth2Client.generateAuthUrl({
-      access_type: "offline",
-      prompt: "consent",
-      login_hint: "info@visitnordicfi.com",
-      scope: ["https://www.googleapis.com/auth/drive.readonly"],
-    });
-    res.redirect(url);
   });
 
   // Public: Get published testimonials
