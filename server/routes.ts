@@ -8156,72 +8156,43 @@ Return a JSON object with:
 
   app.get("/api/google/callback", async (req: Request, res: Response) => {
     try {
-      const { code } = req.query;
+      const { code, scope } = req.query;
       if (!code) {
         return res.status(400).send("No authorization code provided");
       }
       const { tokens } = await googleOAuth2Client.getToken(code as string);
-      console.log("[Google Calendar] ===== REFRESH TOKEN =====");
-      console.log("[Google Calendar] refresh_token:", tokens.refresh_token);
-      console.log("[Google Calendar] ===========================");
-      console.log("[Google Calendar] Save this refresh_token as GOOGLE_CALENDAR_REFRESH_TOKEN in Fly.io secrets");
+      const scopeStr = (scope as string) || '';
+      const isDrive = scopeStr.includes('drive');
+      const label = isDrive ? 'Google Drive' : 'Google Calendar';
+      const envVar = isDrive ? 'GOOGLE_DRIVE_REFRESH_TOKEN' : 'GOOGLE_CALENDAR_REFRESH_TOKEN';
+      console.log(`[${label}] ===== REFRESH TOKEN =====`);
+      console.log(`[${label}] refresh_token:`, tokens.refresh_token);
+      console.log(`[${label}] scope:`, scopeStr);
+      console.log(`[${label}] ================================`);
       res.send(`
         <html>
           <body style="font-family: sans-serif; padding: 40px; text-align: center;">
-            <h1 style="color: green;">✅ Google Calendar Connected!</h1>
-            <p>Refresh token has been printed to server logs.</p>
-            <p>Copy it and save as <code>GOOGLE_CALENDAR_REFRESH_TOKEN</code> in Fly.io secrets.</p>
-            <pre style="background: #f0f0f0; padding: 20px; border-radius: 8px; word-break: break-all;">${tokens.refresh_token || 'No refresh token returned - make sure prompt=consent is set'}</pre>
-            <p style="color: red; font-weight: bold;">⚠️ Delete this route after saving the token!</p>
+            <h1 style="color: green;">${label} Connected!</h1>
+            <p>Save as <code>${envVar}</code></p>
+            <pre style="background: #f0f0f0; padding: 20px; border-radius: 8px; word-break: break-all; max-width: 600px; margin: 0 auto;">${tokens.refresh_token || 'No refresh token returned'}</pre>
           </body>
         </html>
       `);
     } catch (error) {
-      console.error("[Google Calendar] OAuth callback error:", error);
+      console.error("[OAuth] callback error:", error);
       res.status(500).send("Failed to complete OAuth flow. Check server logs.");
     }
   });
 
-  // Google Drive OAuth flow (one-time use to get Drive refresh token)
-  const driveOAuth2Client = new googleapis.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    `${process.env.APP_URL || 'https://appbarbaarintasan.com'}/oauth/callback`
-  );
-
+  // Google Drive OAuth flow - uses same redirect URI as Calendar (/api/google/callback)
   app.get("/admin/setup-drive", requireAuth, (req: Request, res: Response) => {
-    const url = driveOAuth2Client.generateAuthUrl({
+    const url = googleOAuth2Client.generateAuthUrl({
       access_type: "offline",
       prompt: "consent",
       login_hint: "info@visitnordicfi.com",
       scope: ["https://www.googleapis.com/auth/drive.readonly"],
     });
     res.redirect(url);
-  });
-
-  app.get("/oauth/callback", async (req: Request, res: Response) => {
-    try {
-      const { code } = req.query;
-      if (!code) {
-        return res.status(400).send("No authorization code provided");
-      }
-      const { tokens } = await driveOAuth2Client.getToken(code as string);
-      console.log("[Google Drive] ===== DRIVE REFRESH TOKEN =====");
-      console.log("[Google Drive] refresh_token:", tokens.refresh_token);
-      console.log("[Google Drive] ================================");
-      res.send(`
-        <html>
-          <body style="font-family: sans-serif; padding: 40px; text-align: center;">
-            <h1 style="color: green;">Google Drive Connected!</h1>
-            <p>Refresh token:</p>
-            <pre style="background: #f0f0f0; padding: 20px; border-radius: 8px; word-break: break-all; max-width: 600px; margin: 0 auto;">${tokens.refresh_token || 'No refresh token returned'}</pre>
-          </body>
-        </html>
-      `);
-    } catch (error: any) {
-      console.error("[Google Drive] OAuth callback error:", error);
-      res.status(500).send("Failed: " + error.message);
-    }
   });
 
   // Public: Get published testimonials
