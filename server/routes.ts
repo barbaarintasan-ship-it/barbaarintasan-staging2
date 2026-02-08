@@ -8182,6 +8182,48 @@ Return a JSON object with:
     }
   });
 
+  // Google Drive OAuth flow (one-time use to get Drive refresh token)
+  const driveOAuth2Client = new googleapis.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    `${process.env.APP_URL || 'https://appbarbaarintasan.com'}/oauth/callback`
+  );
+
+  app.get("/admin/setup-drive", requireAuth, (req: Request, res: Response) => {
+    const url = driveOAuth2Client.generateAuthUrl({
+      access_type: "offline",
+      prompt: "consent",
+      login_hint: "info@visitnordicfi.com",
+      scope: ["https://www.googleapis.com/auth/drive.readonly"],
+    });
+    res.redirect(url);
+  });
+
+  app.get("/oauth/callback", async (req: Request, res: Response) => {
+    try {
+      const { code } = req.query;
+      if (!code) {
+        return res.status(400).send("No authorization code provided");
+      }
+      const { tokens } = await driveOAuth2Client.getToken(code as string);
+      console.log("[Google Drive] ===== DRIVE REFRESH TOKEN =====");
+      console.log("[Google Drive] refresh_token:", tokens.refresh_token);
+      console.log("[Google Drive] ================================");
+      res.send(`
+        <html>
+          <body style="font-family: sans-serif; padding: 40px; text-align: center;">
+            <h1 style="color: green;">Google Drive Connected!</h1>
+            <p>Refresh token:</p>
+            <pre style="background: #f0f0f0; padding: 20px; border-radius: 8px; word-break: break-all; max-width: 600px; margin: 0 auto;">${tokens.refresh_token || 'No refresh token returned'}</pre>
+          </body>
+        </html>
+      `);
+    } catch (error: any) {
+      console.error("[Google Drive] OAuth callback error:", error);
+      res.status(500).send("Failed: " + error.message);
+    }
+  });
+
   // Public: Get published testimonials
   app.get("/api/testimonials", async (req, res) => {
     try {
