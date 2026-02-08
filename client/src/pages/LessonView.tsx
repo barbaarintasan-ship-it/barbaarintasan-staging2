@@ -422,12 +422,12 @@ export default function LessonView() {
     (l: any) => progressData.some((p: any) => p.lessonId === l.id && p.completed)
   );
 
-  // Auto-show celebration for fully completed course (once per course)
+  // Auto-show celebration for fully completed course (once per session visit)
   useEffect(() => {
     if (!isCourseFullyCompleted || !lesson?.courseId) return;
-    const storageKey = `celebration_shown_${lesson.courseId}`;
-    if (localStorage.getItem(storageKey)) return;
-    localStorage.setItem(storageKey, "true");
+    const sessionKey = `celebration_session_${lesson.courseId}`;
+    if (sessionStorage.getItem(sessionKey)) return;
+    sessionStorage.setItem(sessionKey, "true");
     setCelebration({
       isOpen: true,
       type: "course_complete",
@@ -2063,7 +2063,6 @@ export default function LessonView() {
                       size="sm"
                       className="bg-yellow-50 border-yellow-400 text-yellow-800 hover:bg-yellow-100"
                       onClick={() => {
-                        localStorage.removeItem(`celebration_shown_${lesson?.courseId}`);
                         setCelebration({
                           isOpen: true,
                           type: "course_complete",
