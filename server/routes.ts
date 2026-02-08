@@ -1632,7 +1632,7 @@ Ka jawaab qaabkan JSON ah:
   // Logo base64 endpoint for certificates
   app.get("/api/logo-base64", async (req, res) => {
     try {
-      const logoPath = path.join(process.cwd(), "attached_assets", "NEW_LOGO-BSU_1_1767013726989.png");
+      const logoPath = path.join(process.cwd(), "attached_assets", "NEW_LOGO-BSU_1_1768990258338.png");
       if (fs.existsSync(logoPath)) {
         const logoBuffer = fs.readFileSync(logoPath);
         const base64 = `data:image/png;base64,${logoBuffer.toString("base64")}`;
@@ -1649,7 +1649,7 @@ Ka jawaab qaabkan JSON ah:
   // Signature base64 endpoint for certificates
   app.get("/api/signature-base64", async (req, res) => {
     try {
-      const signaturePath = path.join(process.cwd(), "attached_assets", "musse_signature.png");
+      const signaturePath = path.join(process.cwd(), "client", "public", "signature.png");
       if (fs.existsSync(signaturePath)) {
         const signatureBuffer = fs.readFileSync(signaturePath);
         const base64 = `data:image/png;base64,${signatureBuffer.toString("base64")}`;
@@ -8989,6 +8989,7 @@ Make it a warm, realistic scene showing Somali family life and parenting.`
   });
 
   // Admin: Check video generation status (operationName contains slashes, use wildcard)
+  // When video is done, automatically downloads from Gemini and uploads to R2 for permanent storage
   app.get("/api/admin/lessons/video-status/*", requireAuth, async (req, res) => {
     try {
       const veoApiKey = process.env.GOOGLE_VEO_API_KEY;
@@ -9010,10 +9011,96 @@ Make it a warm, realistic scene showing Somali family life and parenting.`
       }
 
       const data = await response.json();
+      
+      // If video generation is done, download from Gemini and upload to R2 for permanent storage
+      if (data.done && data.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri) {
+        const videoUri = data.response.generateVideoResponse.generatedSamples[0].video.uri;
+        console.log("[AI-VIDEO] Video ready, downloading from Gemini:", videoUri);
+        
+        try {
+          // Download video from Gemini (requires API key)
+          const downloadUrl = videoUri.includes('?') ? `${videoUri}&key=${veoApiKey}` : `${videoUri}?key=${veoApiKey}`;
+          const videoResponse = await fetch(downloadUrl);
+          
+          if (videoResponse.ok) {
+            const videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
+            console.log(`[AI-VIDEO] Downloaded video: ${(videoBuffer.length / 1024 / 1024).toFixed(1)} MB`);
+            
+            // Upload to R2 for permanent storage
+            const { uploadToR2, isR2Configured } = await import('./r2Storage');
+            if (isR2Configured()) {
+              const fileName = `veo-${Date.now()}.mp4`;
+              const { url } = await uploadToR2(videoBuffer, fileName, 'video/mp4', 'lesson-videos', 'dhambaal');
+              console.log(`[AI-VIDEO] Uploaded to R2: ${url}`);
+              
+              // Return R2 URL instead of Gemini temporary URL
+              data._r2VideoUrl = url;
+            } else {
+              console.warn("[AI-VIDEO] R2 not configured, video will use temporary Gemini URL");
+            }
+          } else {
+            console.error("[AI-VIDEO] Failed to download video from Gemini:", videoResponse.status);
+          }
+        } catch (dlError) {
+          console.error("[AI-VIDEO] Error downloading/uploading video:", dlError);
+        }
+      }
+      
       res.json(data);
     } catch (error) {
       console.error("Error checking video status:", error);
       res.status(500).json({ error: "Failed to check video status" });
+    }
+  });
+
+  // Admin: Re-upload a video from external URL to R2 (fix temporary Gemini URLs)
+  app.post("/api/admin/lessons/:id/reupload-video", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const lesson = await storage.getLesson(id);
+      if (!lesson) {
+        return res.status(404).json({ error: "Lesson not found" });
+      }
+      
+      const videoUrl = lesson.videoUrl;
+      if (!videoUrl) {
+        return res.status(400).json({ error: "Lesson has no video URL" });
+      }
+      
+      console.log(`[AI-VIDEO] Re-uploading video for lesson ${id}: ${videoUrl.substring(0, 80)}...`);
+      
+      // Download the video
+      const veoApiKey = process.env.GOOGLE_VEO_API_KEY;
+      let downloadUrl = videoUrl;
+      if (videoUrl.includes('generativelanguage.googleapis.com') && veoApiKey) {
+        downloadUrl = videoUrl.includes('?') ? `${videoUrl}&key=${veoApiKey}` : `${videoUrl}?key=${veoApiKey}`;
+      }
+      
+      const videoResponse = await fetch(downloadUrl);
+      if (!videoResponse.ok) {
+        return res.status(400).json({ error: `Failed to download video: ${videoResponse.status} ${videoResponse.statusText}` });
+      }
+      
+      const videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
+      console.log(`[AI-VIDEO] Downloaded: ${(videoBuffer.length / 1024 / 1024).toFixed(1)} MB`);
+      
+      const { uploadToR2, isR2Configured } = await import('./r2Storage');
+      if (!isR2Configured()) {
+        return res.status(500).json({ error: "R2 storage not configured" });
+      }
+      
+      const fileName = `veo-lesson-${id}-${Date.now()}.mp4`;
+      const { url } = await uploadToR2(videoBuffer, fileName, 'video/mp4', 'lesson-videos', 'dhambaal');
+      console.log(`[AI-VIDEO] Uploaded to R2: ${url}`);
+      
+      // Update lesson with R2 URL
+      await storage.updateLesson(id, { videoUrl: url });
+      console.log(`[AI-VIDEO] Lesson ${id} video URL updated to R2`);
+      
+      res.json({ success: true, url, message: "Video re-uploaded to permanent storage" });
+    } catch (error: any) {
+      console.error("Error re-uploading video:", error);
+      res.status(500).json({ error: error.message || "Failed to re-upload video" });
     }
   });
 

@@ -1374,6 +1374,13 @@ export default function Profile() {
         lastAccessedProgress?.completedAt ||
         lastAccessedProgress?.videoWatchedAt;
 
+      const courseCompletedAt = isCompleted
+        ? courseProgress
+            .filter((p: any) => p.completedAt)
+            .map((p: any) => new Date(p.completedAt).getTime())
+            .sort((a: number, b: number) => b - a)[0] || null
+        : null;
+
       return course
         ? {
             ...course,
@@ -1384,6 +1391,7 @@ export default function Profile() {
             isCompleted,
             currentLesson,
             lastAccessedTime,
+            courseCompletedAt,
           }
         : null;
     })
@@ -2586,10 +2594,23 @@ export default function Profile() {
                               loadLogoAsBase64(),
                               loadSignatureAsBase64(),
                             ]);
+                          const courseLessonTitles = lessons
+                            .filter((l: any) => l.courseId === course.id)
+                            .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+                            .map((l: any) => l.title);
+                          const enrollDate = course.enrollment?.accessStart
+                            ? new Date(course.enrollment.accessStart)
+                            : undefined;
+                          const realCompletionDate = course.courseCompletedAt
+                            ? new Date(course.courseCompletedAt)
+                            : new Date();
                           await generateCertificate({
                             parentName: parent?.name || t("profilePage.parent"),
                             courseName: course.title,
-                            completionDate: new Date(),
+                            completionDate: realCompletionDate,
+                            enrollmentDate: enrollDate,
+                            courseDuration: course.duration || undefined,
+                            lessonTopics: courseLessonTitles,
                             logoBase64,
                             signatureBase64,
                           });
