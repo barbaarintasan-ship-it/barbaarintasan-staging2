@@ -4120,6 +4120,7 @@ Ka jawaab qaabkan JSON ah:
 
       // Automatic badge awarding
       const awardedBadges: string[] = [];
+      let courseCompleted = false;
       try {
         // Get all badges
         const allBadges = await storage.getBadges();
@@ -4149,6 +4150,7 @@ Ka jawaab qaabkan JSON ah:
         ).length;
         
         if (completedLessonsInCourse >= courseLessons.length) {
+          courseCompleted = true;
           const courseCompleteBadge = allBadges.find(b => b.triggerType === "course_complete");
           if (courseCompleteBadge) {
             const awarded = await storage.awardBadge(req.session.parentId, courseCompleteBadge.id);
@@ -4159,7 +4161,7 @@ Ka jawaab qaabkan JSON ah:
         console.error("Error awarding badges:", badgeError);
       }
       
-      res.json({ ...progress, awardedBadges, streak: streakData, pointsAwarded });
+      res.json({ ...progress, awardedBadges, streak: streakData, pointsAwarded, courseCompleted });
     } catch (error) {
       console.error("Error marking lesson complete:", error);
       res.status(500).json({ error: "Failed to mark lesson complete" });

@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import confetti from "canvas-confetti";
 import { useTranslation } from "react-i18next";
 import CelebrationModal, { CelebrationType } from "@/components/CelebrationModal";
+import CourseCompleteCelebration from "@/components/CourseCompleteCelebration";
 import { ExerciseRenderer } from "@/components/exercises/ExerciseRenderer";
 import { useOffline } from "@/contexts/OfflineContext";
 import LessonDiscussionGroup from "@/components/LessonDiscussionGroup";
@@ -453,25 +454,16 @@ export default function LessonView() {
       queryClient.invalidateQueries({ queryKey: ["earnedBadges"] });
       setShowVideoWarning(false);
       
-      // Check if this is the last lesson AND all other lessons are completed (100% course completion)
-      if (isLastLesson) {
-        const completedLessonIds = progressData
-          .filter((p: any) => p.completed)
-          .map((p: any) => p.lessonId);
-        const allOtherLessonsCompleted = courseLessons
-          .slice(0, -1)
-          .every((l: any) => completedLessonIds.includes(l.id));
-        
-        if (allOtherLessonsCompleted) {
-          setCelebration({
-            isOpen: true,
-            type: "course_complete",
-            title: t("lessonView.success"),
-            subtitle: course?.title || "",
-            description: t("lessonView.founderMessage"),
-          });
-          return;
-        }
+      // Check if server confirmed all lessons in the course are now completed
+      if (data.courseCompleted) {
+        setCelebration({
+          isOpen: true,
+          type: "course_complete",
+          title: t("lessonView.success"),
+          subtitle: course?.title || "",
+          description: t("lessonView.founderMessage"),
+        });
+        return;
       }
       
       // Show badge celebration if badges were awarded
@@ -490,9 +482,9 @@ export default function LessonView() {
       setCelebration({
         isOpen: true,
         type: "lesson_complete",
-        title: "Cashar La Dhameeyey!",
+        title: "Hambalyo Casharkan waad Dhameysay!",
         subtitle: lesson?.title || "",
-        description: "Wax weyn ayaad bartay maanta. Sii wad waxbarashada!",
+        description: "10 Dhibcood ayaad heshay.\nWaalid Dadaalaya! Hooyo/Aabe ❤️",
       });
       
       // Refresh scheduling status after successful completion
@@ -1361,7 +1353,15 @@ export default function LessonView() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 font-body">
       {/* Celebration Modal */}
-      {celebration && (
+      {celebration && celebration.type === "course_complete" ? (
+        <CourseCompleteCelebration
+          isOpen={celebration.isOpen}
+          onClose={() => setCelebration(null)}
+          title={celebration.title}
+          subtitle={celebration.subtitle}
+          description={celebration.description}
+        />
+      ) : celebration ? (
         <CelebrationModal
           isOpen={celebration.isOpen}
           onClose={() => setCelebration(null)}
@@ -1370,7 +1370,7 @@ export default function LessonView() {
           subtitle={celebration.subtitle}
           description={celebration.description}
         />
-      )}
+      ) : null}
       
       {/* Scheduling Limit Popup Modal */}
       <Dialog open={showLimitPopup?.isOpen || false} onOpenChange={(open) => !open && setShowLimitPopup(null)}>
