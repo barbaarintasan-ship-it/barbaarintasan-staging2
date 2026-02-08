@@ -654,159 +654,160 @@ export default function Maaweelo() {
                   </div>
                 )}
 
-                <div className={`space-y-6 ${isAdmin && !isEditing ? 'pb-32' : ''}`}>
-                  <div>
-                    <Badge className="mb-3 bg-indigo-600 text-white px-3 py-1">
-                      {selectedStory.characterType === "sahabi" ? "Saxaabi" : "Taabiciin"}: {selectedStory.characterName} (Allaha ka Raali Noqdo)
-                    </Badge>
-                    <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
-                      {selectedStory.titleSomali}
-                    </h1>
-                    <p className="text-slate-400 text-sm flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      {formatDate(selectedStory.storyDate)}
-                    </p>
+                {/* Audio Player - right below images (matching Dhambaal layout) */}
+                {selectedStory.audioUrl && !isEditing && (
+                  <div className="bg-gradient-to-r from-purple-600/30 to-indigo-600/30 rounded-xl p-5 border border-purple-500/30 mb-4">
+                    <div className="flex items-center gap-3">
+                      <Button
+                        onClick={seekBackward}
+                        size="icon"
+                        className="h-10 w-10 rounded-full bg-purple-700/50 hover:bg-purple-600/50 flex-shrink-0"
+                        data-testid="button-seek-backward"
+                      >
+                        <RotateCcw className="w-5 h-5 text-white" />
+                      </Button>
+                      <Button
+                        onClick={toggleAudio}
+                        size="icon"
+                        className="h-14 w-14 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 flex-shrink-0"
+                        data-testid="button-play-audio"
+                      >
+                        {isPlaying ? (
+                          <Pause className="w-6 h-6 text-white" />
+                        ) : (
+                          <Play className="w-6 h-6 text-white ml-1" />
+                        )}
+                      </Button>
+                      <Button
+                        onClick={seekForward}
+                        size="icon"
+                        className="h-10 w-10 rounded-full bg-purple-700/50 hover:bg-purple-600/50 flex-shrink-0"
+                        data-testid="button-seek-forward"
+                      >
+                        <RotateCw className="w-5 h-5 text-white" />
+                      </Button>
+                      <div className="flex-1 ml-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Volume2 className="w-5 h-5 text-purple-300" />
+                          <h3 className="font-semibold text-purple-200">
+                            Dhagayso Sheekada
+                          </h3>
+                        </div>
+                        <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-purple-400 to-pink-500 transition-all duration-200"
+                            style={{ width: `${audioProgress}%` }}
+                          />
+                        </div>
+                        <p className="text-sm text-purple-200 mt-2" data-testid="text-audio-time">
+                          Dhagaysiga cajladani waa: {formatTime(audioCurrentTime)} / {formatTime(audioDuration)}
+                        </p>
+                      </div>
+                    </div>
+                    <audio
+                      ref={audioRef}
+                      src={getProxyAudioUrl(selectedStory.audioUrl) || undefined}
+                      onTimeUpdate={handleAudioTimeUpdate}
+                      onLoadedMetadata={handleAudioLoadedMetadata}
+                      onEnded={handleAudioEnded}
+                      onError={handleAudioError}
+                      preload="auto"
+                      playsInline
+                    />
+                  </div>
+                )}
+
+                {/* Share and Engagement Section - below audio player */}
+                <div className="bg-slate-800/50 rounded-xl p-4 mb-4 space-y-4">
+                  <ShareButton
+                    title={selectedStory.titleSomali}
+                    text={`${selectedStory.titleSomali} - Sheeko caruurta oo Soomaaliya ah`}
+                    url={`${window.location.origin}/maaweelo?story=${selectedStory.id}`}
+                  />
+                  
+                  <ContentReactions
+                    contentType="bedtime_story"
+                    contentId={selectedStory.id}
+                  />
+                  
+                  <ContentComments
+                    contentType="bedtime_story"
+                    contentId={selectedStory.id}
+                  />
+                </div>
+
+                {/* Group Discussion Link */}
+                <button
+                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 border-0 rounded-xl p-4 cursor-pointer transition-all active:scale-[0.98] shadow-lg shadow-indigo-900/30 mb-4"
+                  onClick={async () => {
+                    try {
+                      await fetch("/api/groups/ae26dfaa-c2b3-4236-a168-bc6be74ac442/join", {
+                        method: "POST",
+                        credentials: "include",
+                      });
+                    } catch {}
+                    setLocation("/groups?group=ae26dfaa-c2b3-4236-a168-bc6be74ac442");
+                  }}
+                  data-testid="link-sheeko-group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                      <Users className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="text-white font-bold text-sm">Ku Biir Guruubka lagu falanqeeyo Casharkan</p>
+                      <p className="text-indigo-100 text-xs">Waalidiinta kale la wadaag fikradahaaga</p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-white/80" />
+                  </div>
+                </button>
+
+                {/* Content Card - below share/comments, users can scroll down */}
+                <div className={`bg-gradient-to-br from-indigo-900/50 to-purple-900/50 rounded-2xl p-6 md:p-8 backdrop-blur-sm ${isAdmin && !isEditing ? 'pb-32' : ''}`}>
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex-1">
+                      <Badge className="mb-3 bg-indigo-600 text-white px-3 py-1">
+                        {selectedStory.characterType === "sahabi" ? "Saxaabi" : "Taabiciin"}: {selectedStory.characterName} (Allaha ka Raali Noqdo)
+                      </Badge>
+                      <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+                        {selectedStory.titleSomali}
+                      </h2>
+                      <p className="text-slate-400 text-sm flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        {formatDate(selectedStory.storyDate)}
+                      </p>
+                    </div>
                   </div>
 
                   {/* Hide story content when audio is playing */}
-                  {!isPlaying && (
-                    <div className="bg-gradient-to-br from-indigo-900/50 to-purple-900/50 rounded-2xl p-6">
-                      <div className="prose prose-invert prose-lg max-w-none">
-                        {selectedStory.content.split('\n').map((paragraph, i) => (
-                          <p key={i} className="text-slate-200 leading-relaxed mb-4">
-                            {paragraph}
-                          </p>
-                        ))}
-                      </div>
+                  <div className={isPlaying ? 'hidden' : ''}>
+                    <div className="prose prose-invert prose-lg max-w-none mb-6">
+                      {selectedStory.content.split('\n').map((paragraph, i) => (
+                        <p key={i} className="text-slate-200 leading-relaxed mb-4">
+                          {paragraph}
+                        </p>
+                      ))}
                     </div>
-                  )}
 
-                  {selectedStory.moralLesson && !isEditing && !isPlaying && (
-                    <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-xl p-5 border border-yellow-500/30">
-                      <div className="flex items-start gap-3">
-                        <Heart className="w-6 h-6 text-yellow-400 flex-shrink-0 mt-1" />
-                        <div>
-                          <h3 className="font-semibold text-yellow-300 mb-1">
-                            Casharka Muhiimka ah
-                          </h3>
-                          <p className="text-yellow-100/80">
-                            {selectedStory.moralLesson}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Audio Player for TTS */}
-                  {selectedStory.audioUrl && !isEditing && (
-                    <div className="bg-gradient-to-r from-purple-600/30 to-indigo-600/30 rounded-xl p-4 border border-purple-500/30">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Volume2 className="w-4 h-4 text-purple-300" />
-                        <h3 className="font-semibold text-purple-200 text-sm">
-                          Dhagayso Sheekada
-                        </h3>
-                      </div>
-                      <p className="text-purple-300/70 text-xs mb-3 leading-relaxed">
-                        Waalidka aan wax akhriyi karin waxay dhagaysan karaan codkaan, laakiin waxaan ku taliyaa inuu qofku isku dayo in uu akhriyo qoraalka. Haddii aad mudo bil ah maalin kasta hal mar akhrido waad arki doontaa natiijo wanaagsan.
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          onClick={seekBackward}
-                          size="icon"
-                          className="h-8 w-8 rounded-full bg-purple-700/50 hover:bg-purple-600/50 flex-shrink-0"
-                          data-testid="button-seek-backward"
-                        >
-                          <RotateCcw className="w-4 h-4 text-white" />
-                        </Button>
-                        <Button
-                          onClick={toggleAudio}
-                          size="icon"
-                          className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 flex-shrink-0"
-                          data-testid="button-play-audio"
-                        >
-                          {isPlaying ? (
-                            <Pause className="w-5 h-5 text-white" />
-                          ) : (
-                            <Play className="w-5 h-5 text-white ml-0.5" />
-                          )}
-                        </Button>
-                        <Button
-                          onClick={seekForward}
-                          size="icon"
-                          className="h-8 w-8 rounded-full bg-purple-700/50 hover:bg-purple-600/50 flex-shrink-0"
-                          data-testid="button-seek-forward"
-                        >
-                          <RotateCw className="w-4 h-4 text-white" />
-                        </Button>
-                        <div className="flex-1 ml-2">
-                          <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-purple-400 to-pink-500 transition-all duration-200"
-                              style={{ width: `${audioProgress}%` }}
-                            />
+                    {selectedStory.moralLesson && !isEditing && (
+                      <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-xl p-5 border border-yellow-500/30">
+                        <div className="flex items-start gap-3">
+                          <Heart className="w-6 h-6 text-yellow-400 flex-shrink-0 mt-1" />
+                          <div>
+                            <h3 className="font-semibold text-yellow-300 mb-1">
+                              Casharka Muhiimka ah
+                            </h3>
+                            <p className="text-yellow-100/80">
+                              {selectedStory.moralLesson}
+                            </p>
                           </div>
                         </div>
                       </div>
-                      <p className="text-sm text-purple-200 mt-2" data-testid="text-audio-time">
-                        Dhagaysiga cajladani waa: {formatTime(audioCurrentTime)} / {formatTime(audioDuration)}
-                      </p>
-                      <audio
-                        ref={audioRef}
-                        src={getProxyAudioUrl(selectedStory.audioUrl) || undefined}
-                        onTimeUpdate={handleAudioTimeUpdate}
-                        onLoadedMetadata={handleAudioLoadedMetadata}
-                        onEnded={handleAudioEnded}
-                        onError={handleAudioError}
-                        preload="auto"
-                        playsInline
-                      />
-                    </div>
-                  )}
-
-                  {/* Share and Engagement Section */}
-                  <div className="space-y-6 pt-6 border-t border-slate-700">
-                    <ShareButton
-                      title={selectedStory.titleSomali}
-                      text={`${selectedStory.titleSomali} - Sheeko caruurta oo Soomaaliya ah`}
-                      url={`${window.location.origin}/maaweelo?story=${selectedStory.id}`}
-                    />
-                    
-                    <ContentReactions
-                      contentType="bedtime_story"
-                      contentId={selectedStory.id}
-                    />
-                    
-                    <ContentComments
-                      contentType="bedtime_story"
-                      contentId={selectedStory.id}
-                    />
+                    )}
                   </div>
+                </div>
 
-                  {/* Group Discussion Link */}
-                  <button
-                    className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 border-0 rounded-xl p-4 cursor-pointer transition-all active:scale-[0.98] shadow-lg shadow-indigo-900/30"
-                    onClick={async () => {
-                      try {
-                        await fetch("/api/groups/ae26dfaa-c2b3-4236-a168-bc6be74ac442/join", {
-                          method: "POST",
-                          credentials: "include",
-                        });
-                      } catch {}
-                      setLocation("/groups?group=ae26dfaa-c2b3-4236-a168-bc6be74ac442");
-                    }}
-                    data-testid="link-sheeko-group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-                        <Users className="w-5 h-5 text-white" />
-                      </div>
-                      <div className="flex-1 text-left">
-                        <p className="text-white font-bold text-sm">Ku Biir Guruubka lagu falanqeeyo Casharkan</p>
-                        <p className="text-indigo-100 text-xs">Waalidiinta kale la wadaag fikradahaaga</p>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-white/80" />
-                    </div>
-                  </button>
+                <div className="space-y-6">
 
                   {/* Thank You Modal */}
                   <ThankYouModal
