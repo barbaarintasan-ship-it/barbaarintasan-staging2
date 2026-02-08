@@ -1,10 +1,11 @@
 // Google Drive Integration for Maktabada (Library)
-// Supports both Replit connector (development) and standalone OAuth (Fly.io production)
+// Supports: Replit connector (dev), OAuth refresh token, and Service Account (Fly.io production)
 import { google } from 'googleapis';
 
 const MAKTABADA_FOLDER_NAME = "Barbaarintasan Maktabada";
 
 let cachedOAuthToken: { token: string; expiresAt: number } | null = null;
+let cachedServiceAccountClient: any = null;
 
 async function getAccessTokenViaReplit(): Promise<string> {
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
@@ -86,7 +87,13 @@ export async function getAccessToken(): Promise<string> {
     }
   }
   
-  return await getAccessTokenViaOAuth();
+  try {
+    return await getAccessTokenViaOAuth();
+  } catch (err: any) {
+    console.log('[Google Drive] OAuth access token failed:', err.message, '- trying Service Account...');
+  }
+
+  return await getAccessTokenViaServiceAccount();
 }
 
 async function getDriveClientViaReplit() {
@@ -114,6 +121,48 @@ async function getDriveClientViaOAuth() {
   return google.drive({ version: 'v3', auth: oauth2Client });
 }
 
+async function getDriveClientViaServiceAccount() {
+  if (cachedServiceAccountClient) {
+    return cachedServiceAccountClient;
+  }
+
+  const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!serviceAccountJson) {
+    throw new Error('Google Service Account JSON not configured');
+  }
+
+  const credentials = JSON.parse(serviceAccountJson);
+  const auth = new google.auth.GoogleAuth({
+    credentials,
+    scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+  });
+
+  cachedServiceAccountClient = google.drive({ version: 'v3', auth });
+  console.log('[Google Drive] Using Service Account for Drive access');
+  return cachedServiceAccountClient;
+}
+
+async function getAccessTokenViaServiceAccount(): Promise<string> {
+  const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!serviceAccountJson) {
+    throw new Error('Google Service Account JSON not configured');
+  }
+
+  const credentials = JSON.parse(serviceAccountJson);
+  const auth = new google.auth.GoogleAuth({
+    credentials,
+    scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+  });
+
+  const accessToken = await auth.getAccessToken();
+  if (!accessToken) {
+    throw new Error('Failed to get access token from Service Account');
+  }
+
+  console.log('[Google Drive] Got access token via Service Account');
+  return accessToken;
+}
+
 async function getDriveClient() {
   const isReplit = !!(process.env.REPL_IDENTITY || process.env.WEB_REPL_RENEWAL);
   
@@ -125,7 +174,13 @@ async function getDriveClient() {
     }
   }
   
-  return await getDriveClientViaOAuth();
+  try {
+    return await getDriveClientViaOAuth();
+  } catch (err: any) {
+    console.log('[Google Drive] OAuth failed:', err.message, '- trying Service Account fallback...');
+  }
+
+  return await getDriveClientViaServiceAccount();
 }
 
 export interface DriveFile {
