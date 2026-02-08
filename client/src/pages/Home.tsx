@@ -4,7 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useParentAuth } from "@/contexts/ParentAuthContext";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Search, Bell, ChevronRight, ChevronLeft, Play, Sparkles, LogOut, LogIn, Settings, Star, Lightbulb, Target, Award, BookOpen, Users, Video, X, Bot, Globe, Megaphone, UserPlus, ClipboardCheck, GraduationCap, User, CheckCircle, Radio, Calendar, Check, Plus, Moon, MessageCircle } from "lucide-react";
+import { Search, Bell, ChevronRight, ChevronLeft, Play, Pause, Sparkles, LogOut, LogIn, Settings, Star, Lightbulb, Target, Award, BookOpen, Users, Video, X, Bot, Globe, Megaphone, UserPlus, ClipboardCheck, GraduationCap, User, CheckCircle, Radio, Calendar, Check, Plus, Moon, MessageCircle, RotateCcw, RotateCw, Volume2 } from "lucide-react";
 import { VoiceSpaces } from "@/components/VoiceSpaces";
 import { InstallBanner } from "@/components/InstallBanner";
 import { Input } from "@/components/ui/input";
@@ -775,10 +775,24 @@ interface AiTip {
   correctedContent: string | null;
   category: string;
   publishDate: string;
+  audioUrl: string | null;
+}
+
+function formatAudioTime(seconds: number): string {
+  if (!seconds || isNaN(seconds)) return "0:00";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 function AiTipCard() {
   const { t } = useTranslation();
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioProgress, setAudioProgress] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   const { data: aiTip } = useQuery<AiTip | null>({
     queryKey: ["aiTipToday"],
     queryFn: async () => {
@@ -789,6 +803,21 @@ function AiTipCard() {
   });
 
   if (!aiTip) return null;
+
+  const getProxiedAudioUrl = (url: string | null): string | null => {
+    if (!url) return null;
+    const match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (match) {
+      return `/api/tts-audio/${match[1]}`;
+    }
+    if (url.includes('/file/d/')) {
+      const fileIdMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+      if (fileIdMatch) return `/api/tts-audio/${fileIdMatch[1]}`;
+    }
+    return url;
+  };
+
+  const proxiedAudioUrl = getProxiedAudioUrl(aiTip.audioUrl);
 
   const getCategoryLabel = (category: string) => {
     const categoryKeys: Record<string, string> = {
@@ -816,28 +845,111 @@ function AiTipCard() {
     return `${range.value} ${t(`assessment.${range.unit}`)}`;
   };
 
+  const toggleAudio = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
+
+  const handleTimeUpdate = () => {
+    if (!audioRef.current) return;
+    const progress = (audioRef.current.currentTime / audioRef.current.duration) * 100;
+    setAudioProgress(isNaN(progress) ? 0 : progress);
+    setCurrentTime(audioRef.current.currentTime);
+  };
+
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioRef.current) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const percent = (e.clientX - rect.left) / rect.width;
+    audioRef.current.currentTime = percent * audioRef.current.duration;
+  };
+
   return (
-    <div className="mx-4 mt-4 bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 rounded-2xl p-4 border border-purple-200 shadow-sm" data-testid="card-ai-tip">
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
-          <Sparkles className="w-5 h-5 text-white" />
+    <div className="mx-4 mt-4 bg-gradient-to-br from-purple-100 via-indigo-50 to-blue-100 rounded-2xl p-5 border border-purple-200/60 shadow-md" data-testid="card-ai-tip">
+      <div className="flex items-start gap-4">
+        <div className="relative flex-shrink-0">
+          <img
+            src="/images/founder-musse.jpg"
+            alt="Founder"
+            className="w-14 h-14 rounded-full object-cover border-2 border-purple-300 shadow-sm"
+          />
+          <span className="absolute -bottom-1 -right-1 bg-gradient-to-br from-purple-600 to-indigo-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow">
+            AI
+          </span>
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <h3 className="font-bold text-gray-900 text-sm">{t("home.dailyTips")}</h3>
-            <span className="text-xs bg-purple-200 text-purple-800 px-2 py-0.5 rounded-full font-medium">
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+            <h3 className="font-bold text-gray-900 text-base">{t("home.dailyTips")}</h3>
+            <span className="text-xs bg-purple-200/80 text-purple-800 px-2.5 py-0.5 rounded-full font-medium">
               {getAgeLabel(aiTip.ageRange)}
             </span>
-            <span className="text-xs bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded-full font-medium">
+            <span className="text-xs bg-indigo-200/80 text-indigo-800 px-2.5 py-0.5 rounded-full font-medium">
               {getCategoryLabel(aiTip.category)}
             </span>
           </div>
-          <h4 className="font-semibold text-gray-800 text-sm mb-1">{aiTip.title}</h4>
+          <h4 className="font-semibold text-gray-800 text-[15px] mb-1.5">{aiTip.title}</h4>
           <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
             {aiTip.correctedContent || aiTip.content}
           </p>
         </div>
       </div>
+
+      {proxiedAudioUrl && (
+        <div className="mt-3 bg-gradient-to-r from-slate-800 via-slate-800 to-indigo-900 rounded-xl px-3 py-2.5 shadow-md" data-testid="player-ai-tip-audio">
+          <audio
+            ref={audioRef}
+            src={proxiedAudioUrl}
+            onTimeUpdate={handleTimeUpdate}
+            onEnded={() => { setIsPlaying(false); setAudioProgress(0); }}
+            onLoadedMetadata={() => {
+              if (audioRef.current) setAudioDuration(audioRef.current.duration);
+            }}
+            preload="metadata"
+          />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggleAudio}
+              className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-indigo-500 rounded-full text-white shadow-md hover:bg-indigo-400 transition-all active:scale-95"
+              data-testid="button-ai-tip-audio"
+            >
+              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+            </button>
+            <div className="flex-1 min-w-0">
+              <div
+                className="flex items-end gap-[2px] h-7 cursor-pointer"
+                onClick={handleProgressClick}
+                data-testid="progress-ai-tip-audio"
+              >
+                {Array.from({ length: 40 }).map((_, i) => {
+                  const barProgress = (i / 40) * 100;
+                  const isActive = barProgress < audioProgress;
+                  const heights = [40, 55, 35, 70, 45, 80, 50, 65, 30, 75, 55, 85, 40, 60, 50, 90, 45, 70, 35, 80, 55, 65, 45, 75, 60, 85, 40, 70, 50, 90, 55, 65, 35, 80, 45, 75, 60, 50, 70, 85];
+                  return (
+                    <div
+                      key={i}
+                      className={`flex-1 rounded-sm transition-colors duration-150 ${isActive ? 'bg-indigo-400' : 'bg-slate-600'}`}
+                      style={{ height: `${heights[i % heights.length]}%` }}
+                    />
+                  );
+                })}
+              </div>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-[10px] text-indigo-400 font-mono">{formatAudioTime(currentTime)}</span>
+                <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 inline-block" />
+                  {isPlaying ? "PLAYING" : "READY"}
+                </span>
+                <span className="text-[10px] text-indigo-400 font-mono">{formatAudioTime(audioDuration)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
