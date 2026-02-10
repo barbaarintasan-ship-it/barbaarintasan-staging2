@@ -1831,17 +1831,13 @@ Ka jawaab qaabkan JSON ah:
         return res.status(400).json({ error: "Wadanka waa khasab" });
       }
 
-      if (!city) {
-        return res.status(400).json({ error: "Magaalada waa khasab" });
-      }
-
       // Normalize country and city names (capitalize first letter of each word)
-      const normalizeText = (text: string) => text.trim().split(' ')
+      const normalizeText = (text: string) => text ? text.trim().split(' ')
         .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ');
+        .join(' ') : '';
       
       const normalizedCountry = normalizeText(country);
-      const normalizedCity = normalizeText(city);
+      const normalizedCity = city ? normalizeText(city) : '';
 
       // Check if email already exists
       const existingParent = await storage.getParentByEmail(email);
