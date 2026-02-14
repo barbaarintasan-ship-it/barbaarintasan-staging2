@@ -2322,7 +2322,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white pb-24 lg:pb-8">
       <InstallBanner />
-      <header className="sticky top-0 z-40 bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 safe-top">
+      <header className="sticky top-0 z-40 bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 safe-top prevent-flicker">
         <div className="px-4 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
