@@ -23,7 +23,9 @@ import {
   RotateCw,
   Users,
   Award,
-  Trophy
+  Trophy,
+  SkipBack,
+  SkipForward
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -137,6 +139,36 @@ export default function Dhambaal() {
       if (!localStorage.getItem(key)) {
         setShowThankYouModal(true);
       }
+    }
+    // Auto-play next lesson after a short delay
+    setTimeout(() => {
+      goToNextLesson();
+    }, 2000); // 2 second delay before auto-playing next
+  };
+
+  // Get current message index in the playlist
+  const getCurrentMessageIndex = (): number => {
+    if (!allMessages || !selectedMessage) return -1;
+    return allMessages.findIndex(m => m.id === selectedMessage.id);
+  };
+
+  // Navigate to previous lesson
+  const goToPreviousLesson = () => {
+    if (!allMessages || allMessages.length === 0) return;
+    const currentIndex = getCurrentMessageIndex();
+    if (currentIndex > 0) {
+      setSelectedMessage(allMessages[currentIndex - 1]);
+      setCurrentImageIndex(0);
+    }
+  };
+
+  // Navigate to next lesson
+  const goToNextLesson = () => {
+    if (!allMessages || allMessages.length === 0) return;
+    const currentIndex = getCurrentMessageIndex();
+    if (currentIndex >= 0 && currentIndex < allMessages.length - 1) {
+      setSelectedMessage(allMessages[currentIndex + 1]);
+      setCurrentImageIndex(0);
     }
   };
 
@@ -642,6 +674,39 @@ export default function Dhambaal() {
                 {/* Audio Player - right below images */}
                 {selectedMessage.audioUrl && !isEditing && (
                   <div className="bg-gradient-to-r from-teal-600/30 to-emerald-600/30 rounded-xl p-5 border border-teal-500/30 mb-4">
+                    {/* Playlist position indicator */}
+                    {allMessages && allMessages.length > 1 && (
+                      <div className="flex items-center justify-between mb-3 pb-3 border-b border-teal-500/20">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="w-4 h-4 text-teal-300" />
+                          <span className="text-sm text-teal-200 font-medium">
+                            Casharka {getCurrentMessageIndex() + 1} / {allMessages.length}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            onClick={goToPreviousLesson}
+                            disabled={getCurrentMessageIndex() === 0}
+                            size="sm"
+                            className="h-8 px-3 bg-teal-700/50 hover:bg-teal-600/50 disabled:opacity-30 disabled:cursor-not-allowed"
+                            data-testid="button-previous-lesson"
+                          >
+                            <SkipBack className="w-4 h-4 text-white mr-1" />
+                            <span className="text-xs text-white">Hore</span>
+                          </Button>
+                          <Button
+                            onClick={goToNextLesson}
+                            disabled={getCurrentMessageIndex() === allMessages.length - 1}
+                            size="sm"
+                            className="h-8 px-3 bg-teal-700/50 hover:bg-teal-600/50 disabled:opacity-30 disabled:cursor-not-allowed"
+                            data-testid="button-next-lesson"
+                          >
+                            <span className="text-xs text-white">Xiga</span>
+                            <SkipForward className="w-4 h-4 text-white ml-1" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex items-center gap-3">
                       <Button
                         onClick={seekBackward}
