@@ -4556,7 +4556,7 @@ Ka jawaab qaabkan JSON ah:
         targetParentIds = parentIds.map(p => p.id);
       }
 
-      const uniqueIds = [...new Set(targetParentIds)];
+      const uniqueIds = Array.from(new Set(targetParentIds));
       console.log(`[PUSH BROADCAST] Starting broadcast to ${uniqueIds.length} parents (${audience})`);
 
       let sentCount = 0;
@@ -4714,7 +4714,7 @@ Ka jawaab qaabkan JSON ah:
     try {
       const subscriptions = await storage.getAllPushSubscriptions();
       // Get unique parent IDs and fetch their info
-      const parentIds = [...new Set(subscriptions.map(s => s.parentId))];
+      const parentIds = Array.from(new Set(subscriptions.map(s => s.parentId)));
       const subscribersWithInfo = await Promise.all(
         parentIds.map(async (parentId) => {
           const parent = await storage.getParent(parentId);
@@ -4760,7 +4760,7 @@ Ka jawaab qaabkan JSON ah:
       }
       
       // Get unique parent IDs to save notifications
-      const uniqueParentIds = [...new Set(subscriptions.map(sub => sub.parentId))];
+      const uniqueParentIds = Array.from(new Set(subscriptions.map(sub => sub.parentId)));
       
       // Save notifications to inbox for each parent
       for (const parentId of uniqueParentIds) {
