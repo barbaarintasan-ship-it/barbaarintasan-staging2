@@ -282,7 +282,10 @@ function FlashcardManager() {
     },
     onSuccess: (deletedId) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/flashcard-categories"] });
-      if (selectedCategoryId === deletedId) setSelectedCategoryId(null);
+      // Fix: Use a ref or check if component is still mounted before updating state
+      if (selectedCategoryId === deletedId) {
+        setSelectedCategoryId(null);
+      }
     },
   });
 
@@ -354,22 +357,22 @@ function FlashcardManager() {
     }
   };
 
-  const handleCreateCategory = () => {
+  const handleCreateCategory = useCallback(() => {
     if (!categoryForm.name.trim()) return;
     createCategoryMutation.mutate(categoryForm);
-  };
+  }, [categoryForm, createCategoryMutation]);
 
-  const handleEditCategory = (cat: FlashcardCategory) => {
+  const handleEditCategory = useCallback((cat: FlashcardCategory) => {
     setEditingCategory(cat.id);
     setCategoryForm({ name: cat.name, nameEnglish: cat.nameEnglish || "", iconEmoji: cat.iconEmoji || "", description: cat.description || "" });
-  };
+  }, []);
 
-  const handleSaveCategory = () => {
+  const handleSaveCategory = useCallback(() => {
     if (!editingCategory || !categoryForm.name.trim()) return;
     updateCategoryMutation.mutate({ id: editingCategory, data: categoryForm });
-  };
+  }, [editingCategory, categoryForm, updateCategoryMutation]);
 
-  const handleCreateFlashcard = () => {
+  const handleCreateFlashcard = useCallback(() => {
     if (!selectedCategoryId || !flashcardForm.nameSomali.trim() || !flashcardForm.imageUrl.trim()) return;
     createFlashcardMutation.mutate({
       categoryId: selectedCategoryId,
@@ -377,17 +380,17 @@ function FlashcardManager() {
       nameEnglish: flashcardForm.nameEnglish || undefined,
       imageUrl: flashcardForm.imageUrl,
     });
-  };
+  }, [selectedCategoryId, flashcardForm, createFlashcardMutation]);
 
-  const handleEditFlashcard = (card: Flashcard) => {
+  const handleEditFlashcard = useCallback((card: Flashcard) => {
     setEditingFlashcard(card.id);
     setFlashcardForm({ nameSomali: card.nameSomali, nameEnglish: card.nameEnglish || "", imageUrl: card.imageUrl });
-  };
+  }, []);
 
-  const handleSaveFlashcard = () => {
+  const handleSaveFlashcard = useCallback(() => {
     if (!editingFlashcard || !flashcardForm.nameSomali.trim()) return;
     updateFlashcardMutation.mutate({ id: editingFlashcard, data: flashcardForm });
-  };
+  }, [editingFlashcard, flashcardForm, updateFlashcardMutation]);
 
   return (
     <div className="space-y-6">
@@ -1043,8 +1046,9 @@ export default function Admin() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast.success(`Waa la soo dejiyay! ${data.parentMessages?.length || 0} Dhambaal iyo ${data.bedtimeStories?.length || 0} Sheeko`);
-    } catch (error: any) {
-      toast.error(error.message || "Export-ku wuu fashilmay");
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error(error instanceof Error ? error.message : "Export-ku wuu fashilmay");
     } finally {
       setIsExporting(false);
     }
@@ -1072,8 +1076,9 @@ export default function Admin() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast.success(`Waa la soo dejiyay! ${data.totalUsers} users (${data.totalWithEnrollments} enrolled)`);
-    } catch (error: any) {
-      toast.error(error.message || "Export-ku wuu fashilmay");
+    } catch (error) {
+      console.error("WordPress users export error:", error);
+      toast.error(error instanceof Error ? error.message : "Export-ku wuu fashilmay");
     } finally {
       setIsExportingUsersWP(false);
     }
@@ -1106,7 +1111,8 @@ export default function Admin() {
         } else {
           toast.error(result.error || "Import-ku wuu fashilmay");
         }
-      } catch (error: any) {
+      } catch (error) {
+        console.error("JSON import error:", error);
         toast.error("File-ka JSON-ka ma aha sax");
       } finally {
         setIsImporting(false);
@@ -2444,8 +2450,9 @@ ${baseUrl}/maaweelo`;
       // Set the image URL to the object path
       setNewCourseImageUrl(objectPath);
       toast.success("Sawirka waa la soo geliyay!");
-    } catch (error: any) {
-      toast.error(error.message || "Sawirka ma soo gelin");
+    } catch (error) {
+      console.error("Course image upload error:", error);
+      toast.error(error instanceof Error ? error.message : "Sawirka ma soo gelin");
     } finally {
       setUploadingCourseImage(false);
       // Reset input
@@ -2495,8 +2502,9 @@ ${baseUrl}/maaweelo`;
       
       toast.success("Sawirka waa la geliyay!");
       queryClient.invalidateQueries({ queryKey: ["courses"] });
-    } catch (error: any) {
-      toast.error(error.message || "Sawirka ma soo gelin");
+    } catch (error) {
+      console.error("Course image save error:", error);
+      toast.error(error instanceof Error ? error.message : "Sawirka ma soo gelin");
     } finally {
       setUploadingCourseImageId(null);
     }
@@ -2541,8 +2549,9 @@ ${baseUrl}/maaweelo`;
       toast.success(editingCourseId ? "Koorsada waa la bedelay" : "Koorsada cusub waa lagu daray");
       queryClient.invalidateQueries({ queryKey: ["courses"] });
       resetCourseForm();
-    } catch (error: any) {
-      toast.error(error.message || "Khalad ayaa dhacay");
+    } catch (error) {
+      console.error("Course save error:", error);
+      toast.error(error instanceof Error ? error.message : "Khalad ayaa dhacay");
     } finally {
       setSavingCourse(false);
     }
@@ -2564,8 +2573,8 @@ ${baseUrl}/maaweelo`;
   const handleReorderCourse = async (courseId: string, direction: 'up' | 'down') => {
     if (reorderingCourseId) return;
     
-    const sortedCourses = [...courses].sort((a: any, b: any) => a.order - b.order);
-    const currentIndex = sortedCourses.findIndex((c: any) => c.id === courseId);
+    const sortedCourses = [...courses].sort((a, b) => a.order - b.order);
+    const currentIndex = sortedCourses.findIndex((c) => c.id === courseId);
     
     if (currentIndex === -1) return;
     if (direction === 'up' && currentIndex === 0) return;
