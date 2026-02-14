@@ -14839,6 +14839,9 @@ function MeetEventsAdmin() {
                       const csvData = [];
                       
                       // Add summary rows
+                      const totalPercentage = accessibilityReport.summary.totalLessonsAcrossAll > 0 
+                        ? Math.round((accessibilityReport.summary.freeLessonsAcrossAll / accessibilityReport.summary.totalLessonsAcrossAll) * 100)
+                        : 0;
                       csvData.push({
                         "Koorsada/Course": "GUUD AHAAN (SUMMARY)",
                         "ID": "",
@@ -14846,7 +14849,7 @@ function MeetEventsAdmin() {
                         "Wadarta Casharada/Total Lessons": accessibilityReport.summary.totalLessonsAcrossAll,
                         "Casharada Bilaash/Free Lessons": accessibilityReport.summary.freeLessonsAcrossAll,
                         "Casharada Lacag/Paid Lessons": accessibilityReport.summary.totalLessonsAcrossAll - accessibilityReport.summary.freeLessonsAcrossAll,
-                        "% Bilaash": Math.round((accessibilityReport.summary.freeLessonsAcrossAll / accessibilityReport.summary.totalLessonsAcrossAll) * 100)
+                        "% Bilaash": totalPercentage
                       });
                       csvData.push({}); // Empty row
                       
