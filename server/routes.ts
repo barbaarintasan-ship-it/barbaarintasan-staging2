@@ -10,7 +10,7 @@ import webpush from "web-push";
 import OpenAI from "openai";
 import multer from "multer";
 import { initializeWebSocket, broadcastNewMessage, broadcastVoiceRoomUpdate, broadcastMessageStatus, broadcastAppreciation, getOnlineUsers } from "./websocket/presence";
-import { insertUserSchema, insertCourseSchema, insertLessonSchema, insertQuizSchema, insertQuizQuestionSchema, insertPaymentSubmissionSchema, insertTestimonialSchema, insertAssignmentSubmissionSchema, insertDailyTipScheduleSchema, insertResourceSchema, insertExpenseSchema, insertBankTransferSchema, receiptFingerprints, commentReactions, parents, pushSubscriptions, pushBroadcastLogs, enrollments, type Parent } from "@shared/schema";
+import { insertUserSchema, insertCourseSchema, insertLessonSchema, insertQuizSchema, insertQuizQuestionSchema, insertPaymentSubmissionSchema, insertTestimonialSchema, insertAssignmentSubmissionSchema, insertDailyTipScheduleSchema, insertResourceSchema, insertExpenseSchema, insertBankTransferSchema, receiptFingerprints, commentReactions, parents, pushSubscriptions, pushBroadcastLogs, enrollments, type Parent, type PushSubscription } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -2973,7 +2973,7 @@ Ka jawaab qaabkan JSON ah:
             });
 
             await Promise.allSettled(
-              subscriptions.map(async (sub: any) => {
+              subscriptions.map(async (sub: PushSubscription) => {
                 try {
                   await webpush.sendNotification(
                     {
