@@ -246,12 +246,37 @@ export default function BedtimeStoriesArchive({ onBack }: BedtimeStoriesArchiveP
           {/* Audio Player */}
           {selectedStory.audioUrl && (
             <div className="bg-gradient-to-r from-purple-600/30 to-indigo-600/30 rounded-xl p-5 border border-purple-500/30 mb-6">
-              {/* Playlist Position Indicator */}
-              {currentStoryIndex >= 0 && (
-                <div className="flex items-center justify-center mb-3">
-                  <Badge className="bg-indigo-700/80 text-white px-3 py-1 text-sm">
-                    Casharka {currentStoryIndex + 1} / {stories.length}
-                  </Badge>
+              {/* Playlist Position Indicator and Navigation */}
+              {stories.length > 1 && currentStoryIndex >= 0 && (
+                <div className="flex items-center justify-between mb-3 pb-3 border-b border-purple-500/20">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-purple-300" />
+                    <span className="text-sm text-purple-200 font-medium">
+                      Casharka {currentStoryIndex + 1} / {stories.length}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={goToPreviousStory}
+                      disabled={isFirstStory}
+                      size="sm"
+                      className="h-8 px-3 bg-purple-700/50 hover:bg-purple-600/50 disabled:opacity-30 disabled:cursor-not-allowed"
+                      data-testid="button-previous-story"
+                    >
+                      <SkipBack className="w-4 h-4 text-white mr-1" />
+                      <span className="text-xs text-white">Hore</span>
+                    </Button>
+                    <Button
+                      onClick={goToNextStory}
+                      disabled={isLastStory}
+                      size="sm"
+                      className="h-8 px-3 bg-purple-700/50 hover:bg-purple-600/50 disabled:opacity-30 disabled:cursor-not-allowed"
+                      data-testid="button-next-story"
+                    >
+                      <span className="text-xs text-white">Xiga</span>
+                      <SkipForward className="w-4 h-4 text-white ml-1" />
+                    </Button>
+                  </div>
                 </div>
               )}
               
@@ -301,28 +326,6 @@ export default function BedtimeStoriesArchive({ onBack }: BedtimeStoriesArchiveP
                     {formatTime(audioCurrentTime)} / {formatTime(audioDuration)}
                   </p>
                 </div>
-              </div>
-              
-              {/* Playlist Navigation Buttons */}
-              <div className="flex items-center gap-3 mt-4 pt-4 border-t border-purple-500/20">
-                <Button
-                  onClick={goToPreviousStory}
-                  disabled={isFirstStory}
-                  className="flex-1 bg-purple-700/50 hover:bg-purple-600/50 disabled:opacity-40 disabled:cursor-not-allowed"
-                  data-testid="button-previous-story"
-                >
-                  <SkipBack className="w-4 h-4 mr-2" />
-                  Hore
-                </Button>
-                <Button
-                  onClick={goToNextStory}
-                  disabled={isLastStory}
-                  className="flex-1 bg-purple-700/50 hover:bg-purple-600/50 disabled:opacity-40 disabled:cursor-not-allowed"
-                  data-testid="button-next-story"
-                >
-                  Xiga
-                  <SkipForward className="w-4 h-4 ml-2" />
-                </Button>
               </div>
               
               <audio
