@@ -1969,7 +1969,7 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async markMessagesAsRead(parentId?: string, sessionId?: string): Promise<void> {
+  async markSupportMessagesAsRead(parentId?: string, sessionId?: string): Promise<void> {
     if (parentId) {
       await db.update(supportMessages).set({ isRead: true }).where(eq(supportMessages.parentId, parentId));
     } else if (sessionId) {
@@ -2538,6 +2538,9 @@ export class DatabaseStorage implements IStorage {
       unlockDate: lessons.unlockDate,
       unlockDaysAfter: lessons.unlockDaysAfter,
       videoWatchRequired: lessons.videoWatchRequired,
+      isFree: lessons.isFree,
+      audioUrl: lessons.audioUrl,
+      voiceName: lessons.voiceName,
       courseName: courses.title,
     }).from(lessons)
       .innerJoin(courses, eq(lessons.courseId, courses.id))
@@ -3952,7 +3955,7 @@ export class DatabaseStorage implements IStorage {
       );
   }
 
-  async getUnreadMessageCount(userId: string): Promise<number> {
+  async getUnreadConversationMessageCount(userId: string): Promise<number> {
     const userConversations = await db
       .select({ id: conversations.id })
       .from(conversations)
@@ -5742,7 +5745,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getCommentReactions(commentId: string, parentId?: string): Promise<{ counts: Record<string, number>; userReaction: string | null }> {
+  async getParentPostCommentReactions(commentId: string, parentId?: string): Promise<{ counts: Record<string, number>; userReaction: string | null }> {
     const reactions = await db.select().from(parentPostCommentReactions).where(eq(parentPostCommentReactions.commentId, commentId));
     const counts: Record<string, number> = {};
     let userReaction: string | null = null;
