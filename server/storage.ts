@@ -61,7 +61,6 @@ export interface IStorage {
   createEnrollment(enrollment: InsertEnrollment): Promise<Enrollment>;
   getAllEnrollments(): Promise<Enrollment[]>;
   getEnrollment(id: string): Promise<Enrollment | undefined>;
-  getEnrollmentByPaypalOrderId(paypalOrderId: string): Promise<Enrollment | undefined>;
   deleteEnrollment(id: string): Promise<void>;
   getUpgradeBannerStatus(enrollmentId: string): Promise<{ shouldShow: boolean; expiresAt?: Date }>;
   markUpgradeBannerShown(enrollmentId: string): Promise<void>;
@@ -814,11 +813,6 @@ export class DatabaseStorage implements IStorage {
 
   async getEnrollment(id: string): Promise<Enrollment | undefined> {
     const [enrollment] = await db.select().from(enrollments).where(eq(enrollments.id, id));
-    return enrollment || undefined;
-  }
-
-  async getEnrollmentByPaypalOrderId(paypalOrderId: string): Promise<Enrollment | undefined> {
-    const [enrollment] = await db.select().from(enrollments).where(eq(enrollments.paypalOrderId, paypalOrderId));
     return enrollment || undefined;
   }
 
