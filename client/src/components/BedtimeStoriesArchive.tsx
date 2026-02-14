@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Moon, Star, Calendar, BookOpen, Loader2, Volume2, Play, Pause, RotateCcw, RotateCw } from "lucide-react";
+import { ArrowLeft, Moon, Star, Calendar, BookOpen, Loader2, Volume2, Play, Pause, RotateCcw, RotateCw, SkipBack, SkipForward } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +45,7 @@ export default function BedtimeStoriesArchive({ onBack }: BedtimeStoriesArchiveP
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const autoPlayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data: allStories = [], isLoading } = useQuery<BedtimeStory[]>({
     queryKey: ["/api/bedtime-stories"],
@@ -53,6 +54,15 @@ export default function BedtimeStoriesArchive({ onBack }: BedtimeStoriesArchiveP
   });
 
   const stories = allStories.filter(story => story.isPublished);
+
+  // Get current story index in the playlist
+  const currentStoryIndex = selectedStory 
+    ? stories.findIndex(story => story.id === selectedStory.id)
+    : -1;
+  
+  // Check if we're at the first or last story
+  const isFirstStory = currentStoryIndex === 0;
+  const isLastStory = currentStoryIndex === stories.length - 1;
 
   const formatDate = (dateString: string) => {
     try {
@@ -105,6 +115,13 @@ export default function BedtimeStoriesArchive({ onBack }: BedtimeStoriesArchiveP
     setIsPlaying(false);
     setAudioProgress(0);
     setAudioCurrentTime(0);
+    
+    // Auto-play next lesson after 2 seconds if not at the last story
+    if (!isLastStory && currentStoryIndex >= 0) {
+      autoPlayTimeoutRef.current = setTimeout(() => {
+        goToNextStory();
+      }, 2000);
+    }
   };
 
   const seekBackward = () => {
@@ -119,6 +136,24 @@ export default function BedtimeStoriesArchive({ onBack }: BedtimeStoriesArchiveP
     if (!audio || !audio.duration) return;
     audio.currentTime = Math.min(audio.duration, audio.currentTime + 15);
     setAudioProgress((audio.currentTime / audio.duration) * 100);
+  };
+
+  const goToPreviousStory = () => {
+    if (isFirstStory || currentStoryIndex < 0) return;
+    const previousStory = stories[currentStoryIndex - 1];
+    if (previousStory) {
+      setSelectedStory(previousStory);
+      setCurrentImageIndex(0);
+    }
+  };
+
+  const goToNextStory = () => {
+    if (isLastStory || currentStoryIndex < 0) return;
+    const nextStory = stories[currentStoryIndex + 1];
+    if (nextStory) {
+      setSelectedStory(nextStory);
+      setCurrentImageIndex(0);
+    }
   };
 
   const handleAudioError = (e: React.SyntheticEvent<HTMLAudioElement>) => {
@@ -144,7 +179,22 @@ export default function BedtimeStoriesArchive({ onBack }: BedtimeStoriesArchiveP
     setAudioProgress(0);
     setAudioCurrentTime(0);
     setAudioDuration(0);
+    
+    // Clear any pending auto-play timeout
+    if (autoPlayTimeoutRef.current) {
+      clearTimeout(autoPlayTimeoutRef.current);
+      autoPlayTimeoutRef.current = null;
+    }
   }, [selectedStory?.id]);
+
+  // Cleanup auto-play timeout on component unmount
+  useEffect(() => {
+    return () => {
+      if (autoPlayTimeoutRef.current) {
+        clearTimeout(autoPlayTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (selectedStory) {
     return (
@@ -196,6 +246,15 @@ export default function BedtimeStoriesArchive({ onBack }: BedtimeStoriesArchiveP
           {/* Audio Player */}
           {selectedStory.audioUrl && (
             <div className="bg-gradient-to-r from-purple-600/30 to-indigo-600/30 rounded-xl p-5 border border-purple-500/30 mb-6">
+              {/* Playlist Position Indicator */}
+              {currentStoryIndex >= 0 && (
+                <div className="flex items-center justify-center mb-3">
+                  <Badge className="bg-indigo-700/80 text-white px-3 py-1 text-sm">
+                    Casharka {currentStoryIndex + 1} / {stories.length}
+                  </Badge>
+                </div>
+              )}
+              
               <div className="flex items-center gap-3">
                 <Button
                   onClick={seekBackward}
@@ -243,6 +302,29 @@ export default function BedtimeStoriesArchive({ onBack }: BedtimeStoriesArchiveP
                   </p>
                 </div>
               </div>
+              
+              {/* Playlist Navigation Buttons */}
+              <div className="flex items-center gap-3 mt-4 pt-4 border-t border-purple-500/20">
+                <Button
+                  onClick={goToPreviousStory}
+                  disabled={isFirstStory}
+                  className="flex-1 bg-purple-700/50 hover:bg-purple-600/50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  data-testid="button-previous-story"
+                >
+                  <SkipBack className="w-4 h-4 mr-2" />
+                  Hore
+                </Button>
+                <Button
+                  onClick={goToNextStory}
+                  disabled={isLastStory}
+                  className="flex-1 bg-purple-700/50 hover:bg-purple-600/50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  data-testid="button-next-story"
+                >
+                  Xiga
+                  <SkipForward className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+              
               <audio
                 ref={audioRef}
                 src={getProxyAudioUrl(selectedStory.audioUrl) || undefined}
