@@ -7827,6 +7827,56 @@ Return a JSON object with:
     }
   });
 
+  // Admin: Get lesson accessibility report - shows which lessons are free/accessible
+  app.get("/api/admin/lesson-accessibility-report", requireAuth, async (req, res) => {
+    try {
+      const courses = await storage.getCourses();
+      const report = [];
+
+      for (const course of courses) {
+        const lessons = await storage.getLessonsByCourseId(course.id);
+        const totalLessons = lessons.length;
+        const freeLessons = lessons.filter(l => l.isFree).length;
+        const accessibilityPercentage = totalLessons > 0 ? Math.round((freeLessons / totalLessons) * 100) : 0;
+
+        report.push({
+          courseId: course.id,
+          courseTitle: course.title,
+          courseCourseId: course.courseId,
+          isCourseFreee: course.isFree,
+          totalLessons,
+          freeLessons,
+          paidLessons: totalLessons - freeLessons,
+          accessibilityPercentage,
+          lessons: lessons.map(l => ({
+            id: l.id,
+            title: l.title,
+            order: l.order,
+            isFree: l.isFree,
+            lessonType: l.lessonType,
+            unlockType: l.unlockType
+          }))
+        });
+      }
+
+      // Sort by accessibility percentage (most accessible first)
+      report.sort((a, b) => b.accessibilityPercentage - a.accessibilityPercentage);
+
+      res.json({
+        summary: {
+          totalCourses: courses.length,
+          freeCoursesCount: courses.filter(c => c.isFree).length,
+          totalLessonsAcrossAll: report.reduce((sum, r) => sum + r.totalLessons, 0),
+          freeLessonsAcrossAll: report.reduce((sum, r) => sum + r.freeLessons, 0),
+        },
+        courses: report
+      });
+    } catch (error) {
+      console.error("Error generating lesson accessibility report:", error);
+      res.status(500).json({ error: "Failed to generate accessibility report" });
+    }
+  });
+
   // ==================== END ADMIN COURSE MANAGEMENT ====================
 
   // Upload all course images to R2 (protected by cron secret)
