@@ -18,8 +18,17 @@ const lockOrientation = async () => {
   }
 };
 
+// Minimum height threshold for showing landscape warning on small screens
+// Below this height in landscape mode, the app becomes difficult to use
+const MIN_PORTRAIT_HEIGHT = 600;
+
 // Create accessible landscape warning overlay
 const createLandscapeWarning = () => {
+  // Prevent multiple overlays
+  if (document.getElementById('landscape-warning')) {
+    return;
+  }
+  
   const overlay = document.createElement('div');
   overlay.id = 'landscape-warning';
   overlay.setAttribute('role', 'alert');
@@ -42,11 +51,11 @@ const createLandscapeWarning = () => {
     z-index: 999999;
     font-family: 'Poppins', sans-serif;
   `;
-  overlay.innerHTML = 'Fadlan u jeedi taleefanka si fiican | Please rotate your device to portrait mode ⤵️';
+  overlay.textContent = 'Fadlan u jeedi taleefanka si fiican | Please rotate your device to portrait mode ⤵️';
   document.body.appendChild(overlay);
   
   const checkOrientation = () => {
-    const isLandscape = window.matchMedia('(orientation: landscape) and (max-height: 600px)').matches;
+    const isLandscape = window.matchMedia(`(orientation: landscape) and (max-height: ${MIN_PORTRAIT_HEIGHT}px)`).matches;
     const root = document.getElementById('root');
     
     if (isLandscape) {
@@ -61,6 +70,13 @@ const createLandscapeWarning = () => {
   window.addEventListener('resize', checkOrientation);
   window.addEventListener('orientationchange', checkOrientation);
   checkOrientation();
+  
+  // Return cleanup function
+  return () => {
+    window.removeEventListener('resize', checkOrientation);
+    window.removeEventListener('orientationchange', checkOrientation);
+    overlay.remove();
+  };
 };
 
 // Attempt to lock orientation and create warning overlay when app loads
