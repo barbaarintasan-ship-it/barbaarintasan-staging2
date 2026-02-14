@@ -22,6 +22,7 @@ import Papa from "papaparse";
 import { ExerciseManager } from "@/components/admin/ExerciseManager";
 import { VoiceSpacesAdmin } from "@/components/admin/VoiceSpacesAdmin";
 import { useTranslation } from "react-i18next";
+import type { FlashcardCategory, Flashcard, Parent, Course, Lesson, Module, Hadith, Reciter, ParentMessage, BedtimeStory, QuizQuestion, OpenEndedQuestion, DriveFile, LessonImage } from "@/types/admin";
 
 // Somali day and month names for date formatting
 const SOMALI_DAYS: Record<string, string> = {
@@ -218,7 +219,7 @@ function FlashcardManager() {
     }
   };
 
-  const { data: categories = [], isLoading: loadingCategories } = useQuery({
+  const { data: categories = [], isLoading: loadingCategories } = useQuery<FlashcardCategory[]>({
     queryKey: ["/api/admin/flashcard-categories"],
     queryFn: async () => {
       const res = await fetch("/api/admin/flashcard-categories", { credentials: "include" });
@@ -227,7 +228,7 @@ function FlashcardManager() {
     },
   });
 
-  const { data: flashcards = [], isLoading: loadingFlashcards } = useQuery({
+  const { data: flashcards = [], isLoading: loadingFlashcards } = useQuery<Flashcard[]>({
     queryKey: ["/api/admin/flashcard-categories", selectedCategoryId, "flashcards"],
     queryFn: async () => {
       if (!selectedCategoryId) return [];
@@ -281,7 +282,10 @@ function FlashcardManager() {
     },
     onSuccess: (deletedId) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/flashcard-categories"] });
-      if (selectedCategoryId === deletedId) setSelectedCategoryId(null);
+      // Clear selected category if it was deleted
+      if (selectedCategoryId === deletedId) {
+        setSelectedCategoryId(null);
+      }
     },
   });
 
@@ -358,7 +362,7 @@ function FlashcardManager() {
     createCategoryMutation.mutate(categoryForm);
   };
 
-  const handleEditCategory = (cat: any) => {
+  const handleEditCategory = (cat: FlashcardCategory) => {
     setEditingCategory(cat.id);
     setCategoryForm({ name: cat.name, nameEnglish: cat.nameEnglish || "", iconEmoji: cat.iconEmoji || "", description: cat.description || "" });
   };
@@ -378,7 +382,7 @@ function FlashcardManager() {
     });
   };
 
-  const handleEditFlashcard = (card: any) => {
+  const handleEditFlashcard = (card: Flashcard) => {
     setEditingFlashcard(card.id);
     setFlashcardForm({ nameSomali: card.nameSomali, nameEnglish: card.nameEnglish || "", imageUrl: card.imageUrl });
   };
@@ -453,7 +457,7 @@ function FlashcardManager() {
           {loadingCategories ? (
             <p>Loading...</p>
           ) : (
-            categories.map((cat: any) => (
+            categories.map((cat: FlashcardCategory) => (
               <div
                 key={cat.id}
                 className={`p-3 rounded-lg border cursor-pointer transition-all ${selectedCategoryId === cat.id ? "bg-blue-100 border-blue-500" : "bg-white hover:bg-gray-50"}`}
@@ -480,7 +484,7 @@ function FlashcardManager() {
       {/* Flashcards Section */}
       {selectedCategoryId && (
         <div className="bg-green-50 p-4 rounded-lg">
-          <h3 className="font-semibold mb-4">Kaararka: {categories.find((c: any) => c.id === selectedCategoryId)?.name}</h3>
+          <h3 className="font-semibold mb-4">Kaararka: {categories.find((c: FlashcardCategory) => c.id === selectedCategoryId)?.name}</h3>
           
           {/* Add/Edit Flashcard Form */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
@@ -548,7 +552,7 @@ function FlashcardManager() {
             ) : flashcards.length === 0 ? (
               <p className="col-span-full text-center text-gray-500 py-8">Weli kaaro ma jiraan. Ku dar mid cusub!</p>
             ) : (
-              flashcards.map((card: any) => (
+              flashcards.map((card: Flashcard) => (
                 <div key={card.id} className="bg-white rounded-lg border p-3 text-center" data-testid={`flashcard-item-${card.id}`}>
                   <img src={card.imageUrl} alt={card.nameSomali} className="w-full h-24 object-cover rounded-lg mb-2" />
                   <div className="font-bold text-lg">{card.nameSomali}</div>
@@ -603,7 +607,7 @@ export default function Admin() {
   // Inline quiz fields for lesson type = quiz
   const [inlineQuizTitle, setInlineQuizTitle] = useState("");
   const [inlineQuizDescription, setInlineQuizDescription] = useState("");
-  const [inlineQuizQuestions, setInlineQuizQuestions] = useState<{question: string; options: string[]; correctAnswer: number; explanation: string}[]>([]);
+  const [inlineQuizQuestions, setInlineQuizQuestions] = useState<QuizQuestion[]>([]);
   const [inlineQuestion, setInlineQuestion] = useState("");
   const [inlineOptions, setInlineOptions] = useState(["", "", "", ""]);
   const [inlineCorrectAnswer, setInlineCorrectAnswer] = useState(0);
@@ -641,7 +645,7 @@ export default function Admin() {
   const [videoOperationName, setVideoOperationName] = useState<string | null>(null);
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
   // Open-ended (text-only) questions - Su'aalo qoraal ah oo keliya
-  const [openEndedQuestions, setOpenEndedQuestions] = useState<{question: string; hint?: string}[]>([]);
+  const [openEndedQuestions, setOpenEndedQuestions] = useState<OpenEndedQuestion[]>([]);
   const [newOpenEndedQuestion, setNewOpenEndedQuestion] = useState("");
   const [newOpenEndedHint, setNewOpenEndedHint] = useState("");
   const [editingOpenEndedIndex, setEditingOpenEndedIndex] = useState<number | null>(null);
@@ -797,14 +801,14 @@ export default function Admin() {
   const [selectedParentForEnrollment, setSelectedParentForEnrollment] = useState<string | null>(null);
   const [enrollmentCourseId, setEnrollmentCourseId] = useState("");
   const [enrollmentPlanType, setEnrollmentPlanType] = useState("lifetime");
-  const [parentToDelete, setParentToDelete] = useState<any | null>(null);
+  const [parentToDelete, setParentToDelete] = useState<Parent | null>(null);
   const [enrollmentToDelete, setEnrollmentToDelete] = useState<string | null>(null);
-  const [paymentToDelete, setPaymentToDelete] = useState<any | null>(null);
-  const [adminToggleConfirm, setAdminToggleConfirm] = useState<{parent: any, makeAdmin: boolean} | null>(null);
-  const [hostToggleConfirm, setHostToggleConfirm] = useState<{parent: any, makeHost: boolean} | null>(null);
+  const [paymentToDelete, setPaymentToDelete] = useState<{ id: string; amount: number } | null>(null);
+  const [adminToggleConfirm, setAdminToggleConfirm] = useState<{parent: Parent, makeAdmin: boolean} | null>(null);
+  const [hostToggleConfirm, setHostToggleConfirm] = useState<{parent: Parent, makeHost: boolean} | null>(null);
 
   // Lesson AI Images state
-  const [lessonImages, setLessonImages] = useState<any[]>([]);
+  const [lessonImages, setLessonImages] = useState<LessonImage[]>([]);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
   const [imageGenerateCount, setImageGenerateCount] = useState("3");
 
@@ -830,7 +834,7 @@ export default function Admin() {
   const [hadithSource, setHadithSource] = useState("");
   const [hadithNarrator, setHadithNarrator] = useState("");
   const [hadithTopic, setHadithTopic] = useState("");
-  const [editingHadith, setEditingHadith] = useState<any | null>(null);
+  const [editingHadith, setEditingHadith] = useState<Hadith | null>(null);
   const [editHadithSomaliText, setEditHadithSomaliText] = useState("");
   const [hadithSearchQuery, setHadithSearchQuery] = useState("");
   const [hadithFilterBook, setHadithFilterBook] = useState<string>("all");
@@ -1042,8 +1046,9 @@ export default function Admin() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast.success(`Waa la soo dejiyay! ${data.parentMessages?.length || 0} Dhambaal iyo ${data.bedtimeStories?.length || 0} Sheeko`);
-    } catch (error: any) {
-      toast.error(error.message || "Export-ku wuu fashilmay");
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error(error instanceof Error ? error.message : "Export-ku wuu fashilmay");
     } finally {
       setIsExporting(false);
     }
@@ -1071,8 +1076,9 @@ export default function Admin() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast.success(`Waa la soo dejiyay! ${data.totalUsers} users (${data.totalWithEnrollments} enrolled)`);
-    } catch (error: any) {
-      toast.error(error.message || "Export-ku wuu fashilmay");
+    } catch (error) {
+      console.error("WordPress users export error:", error);
+      toast.error(error instanceof Error ? error.message : "Export-ku wuu fashilmay");
     } finally {
       setIsExportingUsersWP(false);
     }
@@ -1105,7 +1111,8 @@ export default function Admin() {
         } else {
           toast.error(result.error || "Import-ku wuu fashilmay");
         }
-      } catch (error: any) {
+      } catch (error) {
+        console.error("JSON import error:", error);
         toast.error("File-ka JSON-ka ma aha sax");
       } finally {
         setIsImporting(false);
@@ -1647,7 +1654,7 @@ export default function Admin() {
   });
 
   // Fetch Google Drive files for Maktabadda
-  const { data: driveFilesList = [], isLoading: driveFilesLoading } = useQuery<any[]>({
+  const { data: driveFilesList = [], isLoading: driveFilesLoading } = useQuery<DriveFile[]>({
     queryKey: ["adminDriveFiles"],
     queryFn: async () => {
       const res = await fetch("/api/drive/maktabada", { credentials: "include" });
@@ -1658,7 +1665,7 @@ export default function Admin() {
   });
 
   // Fetch Quran Reciters for admin (Shiikhyada Quraanka)
-  const { data: recitersList = [], refetch: refetchReciters } = useQuery<any[]>({
+  const { data: recitersList = [], refetch: refetchReciters } = useQuery<Reciter[]>({
     queryKey: ["adminQuranReciters"],
     queryFn: async () => {
       const res = await fetch("/api/quran-reciters/admin", { credentials: "include" });
@@ -1669,7 +1676,7 @@ export default function Admin() {
   });
 
   // Fetch Hadiths for admin (40 Xadiis)
-  const { data: hadithsList = [], refetch: refetchHadiths } = useQuery<any[]>({
+  const { data: hadithsList = [], refetch: refetchHadiths } = useQuery<Hadith[]>({
     queryKey: ["adminHadiths"],
     queryFn: async () => {
       const res = await fetch("/api/hadiths/admin", { credentials: "include" });
@@ -1680,7 +1687,7 @@ export default function Admin() {
   });
 
   // Fetch Parenting Books
-  const { data: parentingBooksList = [], refetch: refetchParentingBooks } = useQuery<any[]>({
+  const { data: parentingBooksList = [], refetch: refetchParentingBooks } = useQuery<Array<{ id: string; title: string; description: string; url: string; imageUrl: string }>>({
     queryKey: ["adminParentingBooks"],
     queryFn: async () => {
       const res = await fetch("/api/resources?category=parenting-books", { credentials: "include" });
@@ -1691,7 +1698,7 @@ export default function Admin() {
   });
 
   // Fetch Children's Books
-  const { data: childrenBooksList = [], refetch: refetchChildrenBooks } = useQuery<any[]>({
+  const { data: childrenBooksList = [], refetch: refetchChildrenBooks } = useQuery<Array<{ id: string; title: string; description: string; url: string; imageUrl: string }>>({
     queryKey: ["adminChildrenBooks"],
     queryFn: async () => {
       const res = await fetch("/api/resources?category=children-books", { credentials: "include" });
@@ -1702,7 +1709,7 @@ export default function Admin() {
   });
 
   // Fetch all parent messages (including unpublished for admin)
-  const { data: parentMessages = [], isLoading: isLoadingMessages, refetch: refetchParentMessages } = useQuery<any[]>({
+  const { data: parentMessages = [], isLoading: isLoadingMessages, refetch: refetchParentMessages } = useQuery<ParentMessage[]>({
     queryKey: ["/api/admin/parent-messages"],
     queryFn: async () => {
       const res = await fetch("/api/admin/parent-messages", { credentials: "include" });
@@ -1715,7 +1722,7 @@ export default function Admin() {
   });
 
   // Fetch all bedtime stories (including unpublished for admin)
-  const { data: bedtimeStories = [], isLoading: isLoadingStories, refetch: refetchBedtimeStories } = useQuery<any[]>({
+  const { data: bedtimeStories = [], isLoading: isLoadingStories, refetch: refetchBedtimeStories } = useQuery<BedtimeStory[]>({
     queryKey: ["/api/admin/bedtime-stories"],
     queryFn: async () => {
       const res = await fetch("/api/admin/bedtime-stories", { credentials: "include" });
@@ -2443,8 +2450,9 @@ ${baseUrl}/maaweelo`;
       // Set the image URL to the object path
       setNewCourseImageUrl(objectPath);
       toast.success("Sawirka waa la soo geliyay!");
-    } catch (error: any) {
-      toast.error(error.message || "Sawirka ma soo gelin");
+    } catch (error) {
+      console.error("Course image upload error:", error);
+      toast.error(error instanceof Error ? error.message : "Sawirka ma soo gelin");
     } finally {
       setUploadingCourseImage(false);
       // Reset input
@@ -2494,8 +2502,9 @@ ${baseUrl}/maaweelo`;
       
       toast.success("Sawirka waa la geliyay!");
       queryClient.invalidateQueries({ queryKey: ["courses"] });
-    } catch (error: any) {
-      toast.error(error.message || "Sawirka ma soo gelin");
+    } catch (error) {
+      console.error("Course image save error:", error);
+      toast.error(error instanceof Error ? error.message : "Sawirka ma soo gelin");
     } finally {
       setUploadingCourseImageId(null);
     }
@@ -2540,8 +2549,9 @@ ${baseUrl}/maaweelo`;
       toast.success(editingCourseId ? "Koorsada waa la bedelay" : "Koorsada cusub waa lagu daray");
       queryClient.invalidateQueries({ queryKey: ["courses"] });
       resetCourseForm();
-    } catch (error: any) {
-      toast.error(error.message || "Khalad ayaa dhacay");
+    } catch (error) {
+      console.error("Course save error:", error);
+      toast.error(error instanceof Error ? error.message : "Khalad ayaa dhacay");
     } finally {
       setSavingCourse(false);
     }
@@ -2563,8 +2573,8 @@ ${baseUrl}/maaweelo`;
   const handleReorderCourse = async (courseId: string, direction: 'up' | 'down') => {
     if (reorderingCourseId) return;
     
-    const sortedCourses = [...courses].sort((a: any, b: any) => a.order - b.order);
-    const currentIndex = sortedCourses.findIndex((c: any) => c.id === courseId);
+    const sortedCourses = [...courses].sort((a, b) => a.order - b.order);
+    const currentIndex = sortedCourses.findIndex((c) => c.id === courseId);
     
     if (currentIndex === -1) return;
     if (direction === 'up' && currentIndex === 0) return;
