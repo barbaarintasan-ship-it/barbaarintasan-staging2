@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
@@ -85,6 +85,7 @@ export default function Dhambaal() {
   };
   const audioRef = useRef<HTMLAudioElement>(null);
   const imagesRef = useRef<HTMLDivElement>(null);
+  const autoPlayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { parent } = useParentAuth();
   const queryClient = useQueryClient();
   const isAdmin = parent?.isAdmin;
@@ -141,33 +142,27 @@ export default function Dhambaal() {
       }
     }
     // Auto-play next lesson after a short delay
-    setTimeout(() => {
+    // Clear any existing timeout first
+    if (autoPlayTimeoutRef.current) {
+      clearTimeout(autoPlayTimeoutRef.current);
+    }
+    autoPlayTimeoutRef.current = setTimeout(() => {
       goToNextLesson();
     }, 2000); // 2 second delay before auto-playing next
   };
 
-  // Get current message index in the playlist
-  const getCurrentMessageIndex = (): number => {
-    if (!allMessages || !selectedMessage) return -1;
-    return allMessages.findIndex(m => m.id === selectedMessage.id);
-  };
-
   // Navigate to previous lesson
   const goToPreviousLesson = () => {
-    if (!allMessages || allMessages.length === 0) return;
-    const currentIndex = getCurrentMessageIndex();
-    if (currentIndex > 0) {
-      setSelectedMessage(allMessages[currentIndex - 1]);
-      setCurrentImageIndex(0);
-    }
+    if (!allMessages || allMessages.length === 0 || currentMessageIndex <= 0) return;
+    setSelectedMessage(allMessages[currentMessageIndex - 1]);
+    setCurrentImageIndex(0);
   };
 
   // Navigate to next lesson
   const goToNextLesson = () => {
-    if (!allMessages || allMessages.length === 0) return;
-    const currentIndex = getCurrentMessageIndex();
-    if (currentIndex >= 0 && currentIndex < allMessages.length - 1) {
-      setSelectedMessage(allMessages[currentIndex + 1]);
+    if (!allMessages || allMessages.length === 0 || currentMessageIndex < 0) return;
+    if (currentMessageIndex < allMessages.length - 1) {
+      setSelectedMessage(allMessages[currentMessageIndex + 1]);
       setCurrentImageIndex(0);
     }
   };
@@ -203,6 +198,13 @@ export default function Dhambaal() {
     setAudioProgress(0);
     setAudioCurrentTime(0);
     setAudioDuration(0);
+    // Clear any pending auto-play timeout when message changes
+    return () => {
+      if (autoPlayTimeoutRef.current) {
+        clearTimeout(autoPlayTimeoutRef.current);
+        autoPlayTimeoutRef.current = null;
+      }
+    };
   }, [selectedMessage?.id]);
 
   const { data: todayMessage, isLoading: loadingToday } = useQuery<ParentMessage>({
@@ -223,6 +225,12 @@ export default function Dhambaal() {
     enabled: !!parent,
   });
   const readIds = new Set(dhambaalProgress.map(p => p.contentId));
+
+  // Memoize current message index to avoid redundant array searches
+  const currentMessageIndex = useMemo(() => {
+    if (!allMessages || !selectedMessage) return -1;
+    return allMessages.findIndex(m => m.id === selectedMessage.id);
+  }, [allMessages, selectedMessage?.id]);
 
   const markReadMutation = useMutation({
     mutationFn: async (contentId: string) => {
@@ -680,13 +688,13 @@ export default function Dhambaal() {
                         <div className="flex items-center gap-2">
                           <BookOpen className="w-4 h-4 text-teal-300" />
                           <span className="text-sm text-teal-200 font-medium">
-                            Casharka {getCurrentMessageIndex() + 1} / {allMessages.length}
+                            Casharka {currentMessageIndex + 1} / {allMessages.length}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
                             onClick={goToPreviousLesson}
-                            disabled={getCurrentMessageIndex() === 0}
+                            disabled={currentMessageIndex === 0}
                             size="sm"
                             className="h-8 px-3 bg-teal-700/50 hover:bg-teal-600/50 disabled:opacity-30 disabled:cursor-not-allowed"
                             data-testid="button-previous-lesson"
@@ -696,7 +704,7 @@ export default function Dhambaal() {
                           </Button>
                           <Button
                             onClick={goToNextLesson}
-                            disabled={getCurrentMessageIndex() === allMessages.length - 1}
+                            disabled={currentMessageIndex === allMessages.length - 1}
                             size="sm"
                             className="h-8 px-3 bg-teal-700/50 hover:bg-teal-600/50 disabled:opacity-30 disabled:cursor-not-allowed"
                             data-testid="button-next-lesson"
