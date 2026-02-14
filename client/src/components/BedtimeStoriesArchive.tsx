@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { useState, useRef, useEffect } from "react";
 import { format } from "date-fns";
 
+const BLESSING_TEXT = "(Allaha ka Raali Noqdo)";
+
 function getProxyAudioUrl(audioUrl: string | null): string | null {
   if (!audioUrl) return null;
   const match = audioUrl.match(/[?&]id=([^&]+)/);
@@ -258,10 +260,10 @@ export default function BedtimeStoriesArchive({ onBack }: BedtimeStoriesArchiveP
             <CardContent className="p-5">
               <div className="flex items-center gap-2 mb-4">
                 <Badge className="bg-indigo-600 text-white px-3 py-1">
-                  {selectedStory.characterType === "sahabi" ? "Saxaabi" : "Taabiciin"}: {selectedStory.characterName} (Allaha ka Raali Noqdo)
+                  {selectedStory.characterType === "sahabi" ? "Saxaabi" : "Taabiciin"}: {selectedStory.characterName} {BLESSING_TEXT}
                 </Badge>
               </div>
-              <div className={isPlaying ? 'hidden' : ''}>
+              <div className={`${isPlaying ? 'hidden' : ''}`}>
                 <div className="text-slate-200 leading-relaxed whitespace-pre-wrap mb-4">
                   {selectedStory.content}
                 </div>
