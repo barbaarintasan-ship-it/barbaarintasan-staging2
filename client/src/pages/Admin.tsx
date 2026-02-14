@@ -678,6 +678,11 @@ export default function Admin() {
   const [isSeedingContent, setIsSeedingContent] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  
+  // Lesson accessibility report
+  const [showAccessibilityReport, setShowAccessibilityReport] = useState(false);
+  const [accessibilityReport, setAccessibilityReport] = useState<any>(null);
+  const [isLoadingAccessibilityReport, setIsLoadingAccessibilityReport] = useState(false);
   const [isExportingUsersWP, setIsExportingUsersWP] = useState(false);
   
   // Content Creator states
@@ -2902,6 +2907,25 @@ ${baseUrl}/maaweelo`;
       toast.error("Khalad ayaa dhacay");
     },
   });
+
+  // Fetch lesson accessibility report
+  const fetchAccessibilityReport = async () => {
+    setIsLoadingAccessibilityReport(true);
+    try {
+      const res = await fetch("/api/admin/lesson-accessibility-report", {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch accessibility report");
+      const data = await res.json();
+      setAccessibilityReport(data);
+      setShowAccessibilityReport(true);
+    } catch (error) {
+      console.error("Error fetching accessibility report:", error);
+      toast.error("Lama soo saari karin warbixinta casharada");
+    } finally {
+      setIsLoadingAccessibilityReport(false);
+    }
+  };
 
   // Delete Google Drive file mutation
   const deleteDriveFileMutation = useMutation({
@@ -7062,11 +7086,25 @@ ${baseUrl}/maaweelo`;
             <TabsContent value="course-manager">
                 <Card className="border-none shadow-md bg-white">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <BookOpen className="w-5 h-5" />
-                          Maamulka Koorsooyinka
-                        </CardTitle>
-                        <CardDescription>Ku dar, wax ka bedel, ama tirtir koorsooyin. Sawiro iyo qiimayaal ayaad ku dari kartaa.</CardDescription>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="flex items-center gap-2">
+                              <BookOpen className="w-5 h-5" />
+                              Maamulka Koorsooyinka
+                            </CardTitle>
+                            <CardDescription>Ku dar, wax ka bedel, ama tirtir koorsooyin. Sawiro iyo qiimayaal ayaad ku dari kartaa.</CardDescription>
+                          </div>
+                          <Button
+                            onClick={fetchAccessibilityReport}
+                            disabled={isLoadingAccessibilityReport}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-2"
+                          >
+                            <Eye className="w-4 h-4" />
+                            {isLoadingAccessibilityReport ? "Loading..." : "Casharada Furan"}
+                          </Button>
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-6">
                         {/* Add New Course Form */}
@@ -14778,6 +14816,109 @@ function MeetEventsAdmin() {
           )}
         </CardContent>
       </Card>
+      {/* Lesson Accessibility Report Dialog */}
+      <Dialog open={showAccessibilityReport} onOpenChange={setShowAccessibilityReport}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5" />
+              Warbixinta Casharada Furan (Lesson Accessibility Report)
+            </DialogTitle>
+            <DialogDescription>
+              Koorsooyin iyo casharada ay leeyihiin oo si bilaash ah u furan
+            </DialogDescription>
+          </DialogHeader>
+          {accessibilityReport && (
+            <div className="space-y-6">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card className="border-none shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-2xl font-bold text-blue-700">{accessibilityReport.summary.totalCourses}</p>
+                    <p className="text-xs text-blue-600">Koorsooyin Wadarta</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-none shadow-sm bg-gradient-to-br from-green-50 to-emerald-50">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-2xl font-bold text-green-700">{accessibilityReport.summary.freeCoursesCount}</p>
+                    <p className="text-xs text-green-600">Koorsooyin Bilaash</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-none shadow-sm bg-gradient-to-br from-purple-50 to-violet-50">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-2xl font-bold text-purple-700">{accessibilityReport.summary.totalLessonsAcrossAll}</p>
+                    <p className="text-xs text-purple-600">Casharada Wadarta</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-none shadow-sm bg-gradient-to-br from-amber-50 to-orange-50">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-2xl font-bold text-amber-700">{accessibilityReport.summary.freeLessonsAcrossAll}</p>
+                    <p className="text-xs text-amber-600">Casharada Bilaash</p>
+                  </CardContent>
+                </Card>
+              </div>
+              {/* Course Details */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg">Faahfaahinta Koorsada</h3>
+                {accessibilityReport.courses.map((course: any) => (
+                  <Card key={course.courseId} className="border shadow-sm">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-base flex items-center gap-2">
+                            {course.courseTitle}
+                            {course.isCourseFreee && <Badge className="bg-green-100 text-green-700 text-xs">Bilaash</Badge>}
+                          </h4>
+                          <p className="text-sm text-gray-600">ID: {course.courseCourseId}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-blue-600">{course.accessibilityPercentage}%</div>
+                          <p className="text-xs text-gray-500">Furan</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-3 mb-3 text-sm">
+                        <div className="bg-gray-50 p-2 rounded">
+                          <p className="text-gray-600">Wadarta:</p>
+                          <p className="font-semibold">{course.totalLessons}</p>
+                        </div>
+                        <div className="bg-green-50 p-2 rounded">
+                          <p className="text-green-600">Bilaash:</p>
+                          <p className="font-semibold text-green-700">{course.freeLessons}</p>
+                        </div>
+                        <div className="bg-blue-50 p-2 rounded">
+                          <p className="text-blue-600">Lacag:</p>
+                          <p className="font-semibold text-blue-700">{course.paidLessons}</p>
+                        </div>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-green-500 h-2 rounded-full transition-all" style={{ width: `${course.accessibilityPercentage}%` }} />
+                      </div>
+                      {course.freeLessons > 0 && (
+                        <details className="mt-3">
+                          <summary className="cursor-pointer text-sm text-blue-600 hover:text-blue-800">
+                            Casharada Bilaash ({course.freeLessons})
+                          </summary>
+                          <ul className="mt-2 space-y-1 text-sm">
+                            {course.lessons.filter((l: any) => l.isFree).map((lesson: any) => (
+                              <li key={lesson.id} className="flex items-center gap-2 p-2 bg-green-50 rounded">
+                                <CheckCircle className="w-3 h-3 text-green-600" />
+                                <span className="font-medium">#{lesson.order}</span>
+                                <span>{lesson.title}</span>
+                                <Badge variant="outline" className="text-xs">{lesson.lessonType}</Badge>
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
