@@ -18,8 +18,54 @@ const lockOrientation = async () => {
   }
 };
 
-// Attempt to lock orientation when app loads
+// Create accessible landscape warning overlay
+const createLandscapeWarning = () => {
+  const overlay = document.createElement('div');
+  overlay.id = 'landscape-warning';
+  overlay.setAttribute('role', 'alert');
+  overlay.setAttribute('aria-live', 'assertive');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+    color: white;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 1.25rem;
+    font-weight: 600;
+    padding: 2rem;
+    z-index: 999999;
+    font-family: 'Poppins', sans-serif;
+  `;
+  overlay.innerHTML = 'Fadlan u jeedi taleefanka si fiican | Please rotate your device to portrait mode ⤵️';
+  document.body.appendChild(overlay);
+  
+  const checkOrientation = () => {
+    const isLandscape = window.matchMedia('(orientation: landscape) and (max-height: 600px)').matches;
+    const root = document.getElementById('root');
+    
+    if (isLandscape) {
+      overlay.style.display = 'flex';
+      if (root) root.style.display = 'none';
+    } else {
+      overlay.style.display = 'none';
+      if (root) root.style.display = '';
+    }
+  };
+  
+  window.addEventListener('resize', checkOrientation);
+  window.addEventListener('orientationchange', checkOrientation);
+  checkOrientation();
+};
+
+// Attempt to lock orientation and create warning overlay when app loads
 lockOrientation();
+createLandscapeWarning();
 
 // Detect if we're in Sheeko standalone mode
 const isSheekoPWA = () => {
