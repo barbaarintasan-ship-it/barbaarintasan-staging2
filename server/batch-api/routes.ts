@@ -4,7 +4,7 @@
 
 import { type Express, type Request, type Response } from 'express';
 import { db } from '../db';
-import { batchJobs, batchJobItems } from '@shared/schema';
+import { batchJobs, batchJobItems, users } from '@shared/schema';
 import { eq, desc, sql } from 'drizzle-orm';
 import {
   createTranslationBatchJob,
@@ -19,14 +19,29 @@ import {
 } from './service';
 
 /**
+ * Check if user is admin
+ */
+async function isAdmin(req: Request): Promise<boolean> {
+  if (!req.session.userId) {
+    return false;
+  }
+  
+  const [user] = await db.select()
+    .from(users)
+    .where(eq(users.id, req.session.userId));
+  
+  return user?.isAdmin || false;
+}
+
+/**
  * Register batch API routes
  */
 export function registerBatchApiRoutes(app: Express) {
   // Get all batch jobs
   app.get('/api/admin/batch-jobs', async (req: Request, res: Response) => {
     try {
-      if (!req.session.userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+      if (!(await isAdmin(req))) {
+        return res.status(401).json({ error: 'Unauthorized - Admin access required' });
       }
 
       const jobs = await db.select()
@@ -44,8 +59,8 @@ export function registerBatchApiRoutes(app: Express) {
   // Get a specific batch job with items
   app.get('/api/admin/batch-jobs/:id', async (req: Request, res: Response) => {
     try {
-      if (!req.session.userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+      if (!(await isAdmin(req))) {
+        return res.status(401).json({ error: 'Unauthorized - Admin access required' });
       }
 
       const jobId = req.params.id;
@@ -73,8 +88,8 @@ export function registerBatchApiRoutes(app: Express) {
   // Create a new translation batch job
   app.post('/api/admin/batch-jobs/translation', async (req: Request, res: Response) => {
     try {
-      if (!req.session.userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+      if (!(await isAdmin(req))) {
+        return res.status(401).json({ error: 'Unauthorized - Admin access required' });
       }
 
       const limit = parseInt(req.body.limit || '20');
@@ -95,8 +110,8 @@ export function registerBatchApiRoutes(app: Express) {
   // Create a new summary batch job
   app.post('/api/admin/batch-jobs/summary', async (req: Request, res: Response) => {
     try {
-      if (!req.session.userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+      if (!(await isAdmin(req))) {
+        return res.status(401).json({ error: 'Unauthorized - Admin access required' });
       }
 
       const limit = parseInt(req.body.limit || '20');
@@ -117,8 +132,8 @@ export function registerBatchApiRoutes(app: Express) {
   // Create a new quiz improvement batch job
   app.post('/api/admin/batch-jobs/quiz-improvement', async (req: Request, res: Response) => {
     try {
-      if (!req.session.userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+      if (!(await isAdmin(req))) {
+        return res.status(401).json({ error: 'Unauthorized - Admin access required' });
       }
 
       const limit = parseInt(req.body.limit || '20');
@@ -139,8 +154,8 @@ export function registerBatchApiRoutes(app: Express) {
   // Check status of a specific batch job
   app.post('/api/admin/batch-jobs/:id/check-status', async (req: Request, res: Response) => {
     try {
-      if (!req.session.userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+      if (!(await isAdmin(req))) {
+        return res.status(401).json({ error: 'Unauthorized - Admin access required' });
       }
 
       const jobId = req.params.id;
@@ -161,8 +176,8 @@ export function registerBatchApiRoutes(app: Express) {
   // Process results of a completed batch job
   app.post('/api/admin/batch-jobs/:id/process-results', async (req: Request, res: Response) => {
     try {
-      if (!req.session.userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+      if (!(await isAdmin(req))) {
+        return res.status(401).json({ error: 'Unauthorized - Admin access required' });
       }
 
       const jobId = req.params.id;
@@ -179,8 +194,8 @@ export function registerBatchApiRoutes(app: Express) {
   // Cancel a batch job
   app.post('/api/admin/batch-jobs/:id/cancel', async (req: Request, res: Response) => {
     try {
-      if (!req.session.userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+      if (!(await isAdmin(req))) {
+        return res.status(401).json({ error: 'Unauthorized - Admin access required' });
       }
 
       const jobId = req.params.id;
@@ -197,8 +212,8 @@ export function registerBatchApiRoutes(app: Express) {
   // Check status of all pending/processing jobs
   app.post('/api/admin/batch-jobs/check-all-status', async (req: Request, res: Response) => {
     try {
-      if (!req.session.userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+      if (!(await isAdmin(req))) {
+        return res.status(401).json({ error: 'Unauthorized - Admin access required' });
       }
 
       await checkAllBatchJobsStatus();
@@ -219,8 +234,8 @@ export function registerBatchApiRoutes(app: Express) {
   // Get batch job statistics
   app.get('/api/admin/batch-jobs/stats', async (req: Request, res: Response) => {
     try {
-      if (!req.session.userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+      if (!(await isAdmin(req))) {
+        return res.status(401).json({ error: 'Unauthorized - Admin access required' });
       }
 
       const stats = await db.execute(sql`

@@ -999,7 +999,7 @@ export function startCronJobs() {
     } catch (error) {
       console.error("[CRON] Failed to check batch API status:", error);
     }
-  });
+  }, { timezone: "Africa/Mogadishu" });
 
   console.log(
     "[CRON] Cron jobs scheduled (subscriptions hourly, events 30min, appointments 15min, AI tips every 3h (6AM-9PM EAT), flashcards 7AM, parent message 8AM, bedtime story 8AM EAT, bedtime notification 6PM, daily reminders hourly, inactive re-engagement every 6h, batch worker 2AM EAT, batch status check hourly)",

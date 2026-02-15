@@ -3,8 +3,8 @@
  */
 
 import { db } from '../db';
-import { lessons, quizQuestions, batchJobs } from '@shared/schema';
-import { isNull, eq, and, sql } from 'drizzle-orm';
+import { lessons, quizQuestions, batchJobs, translations } from '@shared/schema';
+import { isNull, eq, and, sql, notInArray } from 'drizzle-orm';
 import {
   createTranslationBatchInput,
   createSummaryBatchInput,
@@ -15,12 +15,27 @@ import {
 } from './service';
 import type { TranslationRequest, SummaryRequest, QuizImprovementRequest } from './types';
 
+// Configuration constants
+const MAX_CONCURRENT_BATCH_JOBS = 3;
+const DEFAULT_BATCH_SIZE = 20;
+
 /**
  * Collect lessons that need translation
  * Returns lessons that don't have translations yet
+ * 
+ * NOTE: This currently collects all lessons with content. In production,
+ * you should filter out lessons that already have translations by checking
+ * the translations table to avoid re-translating content.
  */
-export async function collectLessonsForTranslation(limit: number = 50): Promise<TranslationRequest[]> {
-  // Get lessons that have content but might need translation
+export async function collectLessonsForTranslation(limit: number = DEFAULT_BATCH_SIZE): Promise<TranslationRequest[]> {
+  // TODO: Add check for existing translations to avoid duplicates
+  // Example query:
+  // WHERE lesson.id NOT IN (
+  //   SELECT DISTINCT entity_id FROM translations 
+  //   WHERE entity_type = 'lesson' AND target_language IN ('english', 'arabic')
+  // )
+  
+  // Get lessons that have content
   const lessonsToTranslate = await db.select({
     id: lessons.id,
     title: lessons.title,
@@ -260,15 +275,15 @@ export async function runBatchWorker(): Promise<void> {
         sql`${batchJobs.status} IN ('pending', 'processing')`
       );
     
-    // Limit to 3 concurrent batch jobs to avoid overwhelming the API
-    if (activeJobs.length >= 3) {
+    // Limit to MAX_CONCURRENT_BATCH_JOBS concurrent batch jobs to avoid overwhelming the API
+    if (activeJobs.length >= MAX_CONCURRENT_BATCH_JOBS) {
       console.log('[Batch Worker] Maximum concurrent jobs reached, skipping new job creation');
       return;
     }
     
     // Create new jobs (staggered to avoid rate limits)
     // Only create translation jobs for now - can expand later
-    await createTranslationBatchJob(20);
+    await createTranslationBatchJob(DEFAULT_BATCH_SIZE);
     
     console.log('[Batch Worker] Batch processing worker completed');
   } catch (err) {

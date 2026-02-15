@@ -2095,7 +2095,7 @@ export const batchJobs = pgTable("batch_jobs", {
   totalRequests: integer("total_requests").notNull().default(0),
   completedRequests: integer("completed_requests").notNull().default(0),
   failedRequests: integer("failed_requests").notNull().default(0),
-  metadata: text("metadata"), // JSON string with additional info
+  metadata: text("metadata"), // JSON string with additional info (consider jsonb in future for better queries)
   error: text("error"), // Error message if failed
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -2124,3 +2124,22 @@ export const batchJobItems = pgTable("batch_job_items", {
 export const insertBatchJobItemSchema = createInsertSchema(batchJobItems).omit({ id: true, createdAt: true });
 export type InsertBatchJobItem = z.infer<typeof insertBatchJobItemSchema>;
 export type BatchJobItem = typeof batchJobItems.$inferSelect;
+
+// Translations table - stores translated content for lessons
+export const translations = pgTable("translations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  entityType: text("entity_type").notNull(), // 'lesson', 'quiz_question', etc.
+  entityId: varchar("entity_id").notNull(), // ID of the lesson/quiz/etc.
+  fieldName: text("field_name").notNull(), // 'title', 'description', 'textContent', etc.
+  sourceLanguage: text("source_language").notNull().default("somali"),
+  targetLanguage: text("target_language").notNull(), // 'english', 'arabic', etc.
+  translatedText: text("translated_text").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("translation_unique").on(table.entityType, table.entityId, table.fieldName, table.targetLanguage),
+]);
+
+export const insertTranslationSchema = createInsertSchema(translations).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertTranslation = z.infer<typeof insertTranslationSchema>;
+export type Translation = typeof translations.$inferSelect;

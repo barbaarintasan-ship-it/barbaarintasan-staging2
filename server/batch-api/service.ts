@@ -5,7 +5,7 @@
 
 import OpenAI from 'openai';
 import { db } from '../db';
-import { batchJobs, batchJobItems, lessons, quizQuestions } from '@shared/schema';
+import { batchJobs, batchJobItems, lessons, quizQuestions, translations } from '@shared/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import type { 
   BatchJobType, 
@@ -19,6 +19,10 @@ import type {
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+
+// Configuration constants
+const MAX_CONCURRENT_BATCH_JOBS = 3;
+const DEFAULT_BATCH_SIZE = 20;
 
 /**
  * Get OpenAI client instance
@@ -196,7 +200,13 @@ export async function createQuizImprovementBatchInput(
     
     if (!quizQuestion || !quizQuestion.options) continue;
 
-    const options = JSON.parse(quizQuestion.options);
+    let options: string[];
+    try {
+      options = JSON.parse(quizQuestion.options);
+    } catch (err) {
+      console.error(`[Batch API] Failed to parse options for quiz question ${request.quizQuestionId}:`, err);
+      continue;
+    }
 
     batchItems.push({
       custom_id: `quiz-${request.quizQuestionId}`,
@@ -294,7 +304,14 @@ export async function createBatchJob(
   
   // Store individual items
   for (const item of batchItems) {
-    const [entityType, entityId] = item.custom_id.split('-');
+    // Parse custom_id - format depends on job type
+    // translation: "translation-{lessonId}-{field}-{lang}"
+    // summary: "summary-{lessonId}"
+    // quiz: "quiz-{quizQuestionId}"
+    const parts = item.custom_id.split('-');
+    const entityType = parts[0]; // 'translation', 'summary', or 'quiz'
+    const entityId = parts[1]; // lessonId or quizQuestionId
+    
     await db.insert(batchJobItems).values({
       batchJobId: job.id,
       entityType,
@@ -413,17 +430,39 @@ async function applyResultToDatabase(
   if (jobType === 'translation') {
     const [, lessonId, field, targetLang] = parts;
     
-    // For now, we'll store translations in a new column or handle separately
-    // This is a simplified implementation - you may want to create a translations table
-    console.log(`[Batch API] Translation result for lesson ${lessonId}, field ${field}, lang ${targetLang}`);
+    // Store translation in translations table
+    try {
+      await db.insert(translations).values({
+        entityType: 'lesson',
+        entityId: lessonId,
+        fieldName: field,
+        sourceLanguage: 'somali',
+        targetLanguage: targetLang,
+        translatedText: result.trim()
+      }).onConflictDoUpdate({
+        target: [translations.entityType, translations.entityId, translations.fieldName, translations.targetLanguage],
+        set: {
+          translatedText: result.trim(),
+          updatedAt: new Date()
+        }
+      });
+      
+      console.log(`[Batch API] Stored ${targetLang} translation for lesson ${lessonId}.${field}`);
+    } catch (err) {
+      console.error(`[Batch API] Failed to store translation:`, err);
+    }
     
   } else if (jobType === 'summary') {
     const [, lessonId] = parts;
     
     try {
       const data = JSON.parse(result);
-      // Store summary and objectives - you may want to add these fields to lessons table
-      console.log(`[Batch API] Summary result for lesson ${lessonId}`, data);
+      // Store summary and objectives as metadata
+      // You can expand this to add dedicated columns in lessons table if needed
+      console.log(`[Batch API] Summary result for lesson ${lessonId}`, {
+        summary: data.summary?.substring(0, 50) + '...',
+        objectives: data.objectives?.length || 0
+      });
     } catch (err) {
       console.error(`[Batch API] Failed to parse summary result:`, err);
     }
