@@ -10,7 +10,7 @@ import webpush from "web-push";
 import OpenAI from "openai";
 import multer from "multer";
 import { initializeWebSocket, broadcastNewMessage, broadcastVoiceRoomUpdate, broadcastMessageStatus, broadcastAppreciation, getOnlineUsers } from "./websocket/presence";
-import { insertUserSchema, insertCourseSchema, insertLessonSchema, insertQuizSchema, insertQuizQuestionSchema, insertPaymentSubmissionSchema, insertTestimonialSchema, insertAssignmentSubmissionSchema, insertDailyTipScheduleSchema, insertResourceSchema, insertExpenseSchema, insertBankTransferSchema, receiptFingerprints, commentReactions, parents, pushSubscriptions, pushBroadcastLogs, enrollments, type Parent, type PushSubscription } from "@shared/schema";
+import { insertUserSchema, insertCourseSchema, insertLessonSchema, insertQuizSchema, insertQuizQuestionSchema, insertPaymentSubmissionSchema, insertTestimonialSchema, insertAssignmentSubmissionSchema, insertDailyTipScheduleSchema, insertResourceSchema, insertExpenseSchema, insertBankTransferSchema, receiptFingerprints, commentReactions, parents, pushSubscriptions, pushBroadcastLogs, enrollments, translations, type Parent, type PushSubscription } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -180,6 +180,99 @@ declare module 'express-session' {
     sessionToken: string; // For single-session enforcement
     oauthReturnUrl?: string; // For WordPress redirect after OAuth
   }
+}
+
+/**
+ * Helper function to apply translations to any entity
+ * Fetches translations from the database and applies them to the entity
+ */
+async function applyTranslations<T extends Record<string, any>>(
+  entity: T,
+  entityType: string,
+  entityId: string,
+  language: string,
+  fields: string[]
+): Promise<T> {
+  // If language is Somali or not specified, return original entity
+  if (!language || language === 'so' || language === 'somali') {
+    return entity;
+  }
+
+  // Fetch translations for this entity
+  const entityTranslations = await db.select()
+    .from(translations)
+    .where(
+      and(
+        eq(translations.entityType, entityType),
+        eq(translations.entityId, entityId),
+        eq(translations.targetLanguage, language === 'en' ? 'english' : language)
+      )
+    );
+
+  // Apply translations to the entity
+  const translatedEntity = { ...entity };
+  for (const translation of entityTranslations) {
+    if (fields.includes(translation.fieldName)) {
+      translatedEntity[translation.fieldName] = translation.translatedText;
+    }
+  }
+
+  return translatedEntity;
+}
+
+/**
+ * Helper function to apply translations to an array of entities
+ */
+async function applyTranslationsToArray<T extends Record<string, any> & { id: string }>(
+  entities: T[],
+  entityType: string,
+  language: string,
+  fields: string[]
+): Promise<T[]> {
+  // If language is Somali or not specified, return original entities
+  if (!language || language === 'so' || language === 'somali') {
+    return entities;
+  }
+
+  // Return early if no entities
+  if (entities.length === 0) {
+    return entities;
+  }
+
+  // Fetch all translations for these entities in one query
+  const entityIds = entities.map(e => e.id);
+  const allTranslations = await db.select()
+    .from(translations)
+    .where(
+      and(
+        eq(translations.entityType, entityType),
+        sql`${translations.entityId} = ANY(${entityIds})`,
+        eq(translations.targetLanguage, language === 'en' ? 'english' : language)
+      )
+    );
+
+  // Group translations by entity ID
+  const translationsByEntity = new Map<string, typeof allTranslations>();
+  for (const translation of allTranslations) {
+    if (!translationsByEntity.has(translation.entityId)) {
+      translationsByEntity.set(translation.entityId, []);
+    }
+    translationsByEntity.get(translation.entityId)!.push(translation);
+  }
+
+  // Apply translations to each entity
+  return entities.map(entity => {
+    const entityTranslations = translationsByEntity.get(entity.id) || [];
+    const translatedEntity = { ...entity };
+    
+    for (const translation of entityTranslations) {
+      if (fields.includes(translation.fieldName)) {
+        translatedEntity[translation.fieldName] = translation.translatedText;
+      }
+    }
+    
+    return translatedEntity;
+  });
 }
 
 // Authentication middleware - checks both old admin system and parent admin
@@ -4891,7 +4984,19 @@ Ka jawaab qaabkan JSON ah:
   // Course routes
   app.get("/api/courses", async (req, res) => {
     try {
-      const courses = await storage.getAllCourses();
+      const lang = req.query.lang as string; // Get language from query parameter
+      let courses = await storage.getAllCourses();
+      
+      // Apply translations if language is specified
+      if (lang) {
+        courses = await applyTranslationsToArray(
+          courses,
+          'course',
+          lang,
+          ['title', 'description', 'comingSoonMessage']
+        );
+      }
+      
       res.json(courses);
     } catch (error) {
       console.error("Error fetching courses:", error);
@@ -4901,10 +5006,24 @@ Ka jawaab qaabkan JSON ah:
 
   app.get("/api/courses/:id", async (req, res) => {
     try {
-      const course = await storage.getCourseByCourseId(req.params.id);
+      const lang = req.query.lang as string;
+      let course = await storage.getCourseByCourseId(req.params.id);
+      
       if (!course) {
         return res.status(404).json({ error: "Course not found" });
       }
+      
+      // Apply translations if language is specified
+      if (lang) {
+        course = await applyTranslations(
+          course,
+          'course',
+          course.id,
+          lang,
+          ['title', 'description', 'comingSoonMessage']
+        );
+      }
+      
       res.json(course);
     } catch (error) {
       console.error("Error fetching course:", error);
