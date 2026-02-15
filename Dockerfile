@@ -35,6 +35,9 @@ RUN mkdir -p /app/dist/public/course-images
 # Copy attached_assets if they exist (logo, icons etc)
 COPY --from=builder /app/attached_assets ./attached_assets
 
+# Copy scripts directory for CLI tools (e.g., translation-manager.js)
+COPY --from=builder /app/scripts ./scripts
+
 # Create TTS audio temp directory
 RUN mkdir -p /app/tts-audio
 
