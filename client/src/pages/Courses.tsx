@@ -3,6 +3,7 @@ import { ChevronLeft, BookOpen, Baby, Brain, Sparkles, Crown, Gift, Clock } from
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/hooks/useLanguage";
 
 const courseImages: Record<string, string> = {
   "0-6": "https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=400&h=300&fit=crop",
@@ -32,10 +33,11 @@ const courseColors: Record<string, { bg: string; border: string; text: string; g
 
 export default function Courses() {
   const { t } = useTranslation();
+  const { apiLanguage } = useLanguage();
   const { data: courses = [], isLoading } = useQuery({
     queryKey: ["courses"],
     queryFn: async () => {
-      const res = await fetch("/api/courses");
+      const res = await fetch(`/api/courses?lang=${apiLanguage}`);
       const data = await res.json();
       return Array.isArray(data) ? data : [];
     },
