@@ -62,6 +62,9 @@ interface ParentMessage {
   authorName: string | null;
 }
 
+// Delay before attempting to autoplay audio (allows audio element to be ready)
+const AUTOPLAY_DELAY_MS = 300;
+
 export default function Dhambaal() {
   const [, setLocation] = useLocation();
   const [selectedMessage, setSelectedMessage] = useState<ParentMessage | null>(null);
@@ -208,7 +211,7 @@ export default function Dhambaal() {
     // Autoplay when a message is selected
     if (selectedMessage?.audioUrl) {
       // Small delay to ensure audio element is ready
-      const playTimeout = setTimeout(() => {
+      autoPlayTimeoutRef.current = setTimeout(() => {
         const audio = audioRef.current;
         if (audio) {
           audio.play().then(() => {
@@ -222,10 +225,14 @@ export default function Dhambaal() {
             console.log("Autoplay prevented by browser:", err);
           });
         }
-      }, 300); // Small delay to ensure audio is loaded
+        autoPlayTimeoutRef.current = null;
+      }, AUTOPLAY_DELAY_MS);
       
       return () => {
-        clearTimeout(playTimeout);
+        if (autoPlayTimeoutRef.current) {
+          clearTimeout(autoPlayTimeoutRef.current);
+          autoPlayTimeoutRef.current = null;
+        }
       };
     }
   }, [selectedMessage?.id]);
