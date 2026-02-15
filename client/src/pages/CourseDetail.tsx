@@ -16,6 +16,7 @@ import { useOfflineDownloads } from "@/hooks/useOfflineDownloads";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Progress } from "@/components/ui/progress";
+import { useLanguage } from "@/hooks/useLanguage";
 // PayPal integration available but currently disabled - backend routes preserved for future use
 
 
@@ -31,6 +32,7 @@ const defaultPrices: Record<PlanType, number> = {
 
 export default function CourseDetail() {
   const { t } = useTranslation();
+  const { apiLanguage } = useLanguage();
   const [, params] = useRoute("/course/:id");
   const [, setLocation] = useLocation();
   const courseId = params?.id;
@@ -145,7 +147,7 @@ export default function CourseDetail() {
   const { data: course, isLoading: courseLoading } = useQuery({
     queryKey: ["course", courseId],
     queryFn: async () => {
-      const res = await fetch(`/api/courses/${courseId}`);
+      const res = await fetch(`/api/courses/${courseId}?lang=${apiLanguage}`);
       if (!res.ok) throw new Error("Course not found");
       return res.json();
     },
@@ -155,7 +157,7 @@ export default function CourseDetail() {
     queryKey: ["lessons", course?.id],
     queryFn: async () => {
       if (!course?.id) return [];
-      const res = await fetch(`/api/lessons?courseId=${course.id}`);
+      const res = await fetch(`/api/lessons?courseId=${course.id}&lang=${apiLanguage}`);
       return res.json();
     },
     enabled: !!course?.id,
@@ -168,7 +170,7 @@ export default function CourseDetail() {
     queryKey: ["courseQuizzes", course?.id],
     queryFn: async () => {
       if (!course?.id) return [];
-      const res = await fetch(`/api/courses/${course.id}/quizzes`);
+      const res = await fetch(`/api/courses/${course.id}/quizzes?lang=${apiLanguage}`);
       return res.json();
     },
     enabled: !!course?.id,

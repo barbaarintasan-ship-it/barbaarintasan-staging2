@@ -35,6 +35,7 @@ import { Input } from "@/components/ui/input";
 import { useParentAuth } from "@/contexts/ParentAuthContext";
 import { toast } from "sonner";
 import { ShareButton, ContentReactions, ContentComments, ThankYouModal } from "@/components/engagement";
+import { useLanguage } from "@/hooks/useLanguage";
 
 function getProxyAudioUrl(audioUrl: string | null): string | null {
   if (!audioUrl) return null;
@@ -62,6 +63,7 @@ interface BedtimeStory {
 }
 
 export default function Maaweelo() {
+  const { apiLanguage } = useLanguage();
   const [, setLocation] = useLocation();
   const [selectedStory, setSelectedStory] = useState<BedtimeStory | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -181,11 +183,11 @@ export default function Maaweelo() {
   }, [selectedStory?.id]);
 
   const { data: todayStory, isLoading: loadingToday } = useQuery<BedtimeStory>({
-    queryKey: ["/api/bedtime-stories/today"],
+    queryKey: [`/api/bedtime-stories/today?lang=${apiLanguage}`],
   });
 
   const { data: allStories, isLoading: loadingAll } = useQuery<BedtimeStory[]>({
-    queryKey: ["/api/bedtime-stories"],
+    queryKey: [`/api/bedtime-stories?lang=${apiLanguage}`],
   });
 
   const { data: sheekoProgress = [] } = useQuery<{ contentId: string }[]>({
@@ -255,8 +257,8 @@ export default function Maaweelo() {
       return res.json();
     },
     onSuccess: (updatedStory) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bedtime-stories"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/bedtime-stories/today"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/bedtime-stories?lang=${apiLanguage}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/bedtime-stories/today?lang=${apiLanguage}`] });
       setSelectedStory(updatedStory);
       setIsEditing(false);
       toast.success("Sheekada waa la cusboonaysiiyay!");
@@ -275,8 +277,8 @@ export default function Maaweelo() {
       return res.json();
     },
     onSuccess: (updatedStory) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bedtime-stories"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/bedtime-stories/today"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/bedtime-stories?lang=${apiLanguage}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/bedtime-stories/today?lang=${apiLanguage}`] });
       setSelectedStory(updatedStory);
       toast.success("Codka waa la sameeyay!");
     },

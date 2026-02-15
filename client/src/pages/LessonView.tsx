@@ -17,6 +17,7 @@ import { useOffline } from "@/contexts/OfflineContext";
 import LessonDiscussionGroup from "@/components/LessonDiscussionGroup";
 import { useOfflineDownloads } from "@/hooks/useOfflineDownloads";
 import { getOfflineLesson } from "@/lib/offlineStorage";
+import { useLanguage } from "@/hooks/useLanguage";
 
 function getYouTubeId(url: string): string {
   const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
@@ -132,6 +133,7 @@ function generateGoogleCalendarLink(title: string, date: string, meetUrl: string
 
 export default function LessonView() {
   const { t } = useTranslation();
+  const { apiLanguage } = useLanguage();
   const [, params] = useRoute("/lesson/:id");
   const lessonId = params?.id;
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -226,7 +228,7 @@ export default function LessonView() {
   const { data: lesson, isLoading, error, isError } = useQuery({
     queryKey: ["lesson", lessonId],
     queryFn: async () => {
-      const res = await fetch(`/api/lessons/${lessonId}`, { credentials: "include" });
+      const res = await fetch(`/api/lessons/${lessonId}?lang=${apiLanguage}`, { credentials: "include" });
       if (res.status === 401) {
         window.location.href = "/login";
         throw new Error("Unauthorized");

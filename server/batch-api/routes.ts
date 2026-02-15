@@ -10,7 +10,8 @@ import {
   createTranslationBatchJob,
   createSummaryBatchJob,
   createQuizImprovementBatchJob,
-  checkAllBatchJobsStatus
+  checkAllBatchJobsStatus,
+  createComprehensiveTranslationBatchJob
 } from './worker';
 import {
   checkBatchJobStatus,
@@ -104,6 +105,32 @@ export function registerBatchApiRoutes(app: Express) {
     } catch (err) {
       console.error('[Batch API Routes] Error creating translation job:', err);
       res.status(500).json({ error: 'Failed to create translation job' });
+    }
+  });
+
+  // Create comprehensive translation batch jobs (all content types)
+  app.post('/api/admin/batch-jobs/translation-comprehensive', async (req: Request, res: Response) => {
+    try {
+      if (!(await isAdmin(req))) {
+        return res.status(401).json({ error: 'Unauthorized - Admin access required' });
+      }
+
+      const limit = parseInt(req.body.limit || '20');
+
+      const jobIds = await createComprehensiveTranslationBatchJob(limit);
+
+      if (jobIds.length === 0) {
+        return res.json({ message: 'No content found that needs translation' });
+      }
+
+      res.json({ 
+        jobIds, 
+        count: jobIds.length,
+        message: `Created ${jobIds.length} translation batch jobs successfully` 
+      });
+    } catch (err) {
+      console.error('[Batch API Routes] Error creating comprehensive translation job:', err);
+      res.status(500).json({ error: 'Failed to create comprehensive translation job' });
     }
   });
 

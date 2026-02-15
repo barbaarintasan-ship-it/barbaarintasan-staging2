@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useParentAuth } from "@/contexts/ParentAuthContext";
+import { useLanguage } from "@/hooks/useLanguage";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Search, Bell, ChevronRight, ChevronLeft, Play, Pause, Sparkles, LogOut, LogIn, Settings, Star, Lightbulb, Target, Award, BookOpen, Users, Video, X, Bot, Globe, Megaphone, UserPlus, ClipboardCheck, GraduationCap, User, CheckCircle, Radio, Calendar, Check, Plus, Moon, MessageCircle, RotateCcw, RotateCw, Volume2, Clock, ExternalLink } from "lucide-react";
@@ -518,6 +519,7 @@ function SheekoSection() {
 }
 
 function DhambaalSection() {
+  const { apiLanguage } = useLanguage();
   interface ParentMessage {
     id: string;
     title: string;
@@ -528,7 +530,7 @@ function DhambaalSection() {
   }
 
   const { data: todayMessage } = useQuery<ParentMessage>({
-    queryKey: ["/api/parent-messages/today"],
+    queryKey: [`/api/parent-messages/today?lang=${apiLanguage}`],
   });
 
   return (
@@ -574,6 +576,7 @@ function DhambaalSection() {
 }
 
 function MaaweeloSection() {
+  const { apiLanguage } = useLanguage();
   interface BedtimeStory {
     id: string;
     titleSomali: string;
@@ -584,7 +587,7 @@ function MaaweeloSection() {
   }
 
   const { data: todayStory } = useQuery<BedtimeStory>({
-    queryKey: ["/api/bedtime-stories/today"],
+    queryKey: [`/api/bedtime-stories/today?lang=${apiLanguage}`],
   });
 
   return (

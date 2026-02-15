@@ -4,6 +4,10 @@ import type { InsertParentMessage } from "@shared/schema";
 import { generateParentMessageAudio } from "./tts";
 import { saveDhambaalToGoogleDrive } from "./googleDrive";
 import OpenAI from "openai";
+import { db } from "./db";
+import { translations } from "@shared/schema";
+import { eq, and, inArray } from "drizzle-orm";
+import { isSomaliLanguage, normalizeLanguageCode } from "./utils/translations";
 
 // Use Replit AI Integration on Replit, fallback to direct OpenAI on Fly.io
 const useReplitIntegration = !!(process.env.AI_INTEGRATIONS_OPENAI_API_KEY && process.env.AI_INTEGRATIONS_OPENAI_BASE_URL);
@@ -364,10 +368,51 @@ export function clearParentMessagesCache(): void {
   console.log("[Parent Messages] Cache cleared");
 }
 
+async function applyTranslationsToMessages<T extends Record<string, any> & { id: string }>(
+  messages: T[],
+  language: string
+): Promise<T[]> {
+  if (isSomaliLanguage(language) || messages.length === 0) {
+    return messages;
+  }
+
+  const messageIds = messages.map(m => m.id);
+  const allTranslations = await db.select()
+    .from(translations)
+    .where(
+      and(
+        eq(translations.entityType, 'parent_message'),
+        inArray(translations.entityId, messageIds),
+        eq(translations.targetLanguage, normalizeLanguageCode(language))
+      )
+    );
+
+  const translationsByMessage = new Map<string, typeof allTranslations>();
+  for (const translation of allTranslations) {
+    if (!translationsByMessage.has(translation.entityId)) {
+      translationsByMessage.set(translation.entityId, []);
+    }
+    translationsByMessage.get(translation.entityId)!.push(translation);
+  }
+
+  return messages.map(message => {
+    const messageTranslations = translationsByMessage.get(message.id) || [];
+    const translated = { ...message };
+    for (const t of messageTranslations) {
+      if (['title', 'content', 'keyPoints'].includes(t.fieldName)) {
+        translated[t.fieldName] = t.translatedText;
+      }
+    }
+    return translated;
+  });
+}
+
 export function registerParentMessageRoutes(app: Express): void {
   app.get("/api/parent-messages", async (req: Request, res: Response) => {
     try {
-      const messages = await storage.getParentMessages(30);
+      const lang = req.query.lang as string;
+      let messages = await storage.getParentMessages(30);
+      messages = await applyTranslationsToMessages(messages, lang);
       res.json(messages);
     } catch (error) {
       console.error("Error fetching parent messages:", error);
@@ -392,11 +437,13 @@ export function registerParentMessageRoutes(app: Express): void {
 
   app.get("/api/parent-messages/today", async (req: Request, res: Response) => {
     try {
-      const message = await storage.getTodayParentMessage();
+      const lang = req.query.lang as string;
+      let message = await storage.getTodayParentMessage();
       if (!message) {
         return res.status(404).json({ error: "Dhambaalka maanta lama helin" });
       }
-      res.json(message);
+      const translated = await applyTranslationsToMessages([message], lang);
+      res.json(translated[0]);
     } catch (error) {
       console.error("Error fetching today's message:", error);
       res.status(500).json({ error: "Failed to fetch message" });
@@ -405,11 +452,13 @@ export function registerParentMessageRoutes(app: Express): void {
 
   app.get("/api/parent-messages/:id", async (req: Request, res: Response) => {
     try {
-      const message = await storage.getParentMessage(req.params.id);
+      const lang = req.query.lang as string;
+      let message = await storage.getParentMessage(req.params.id);
       if (!message) {
         return res.status(404).json({ error: "Message not found" });
       }
-      res.json(message);
+      const translated = await applyTranslationsToMessages([message], lang);
+      res.json(translated[0]);
     } catch (error) {
       console.error("Error fetching message:", error);
       res.status(500).json({ error: "Failed to fetch message" });
