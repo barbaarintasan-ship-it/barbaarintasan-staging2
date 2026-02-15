@@ -68,7 +68,7 @@ npm run translate:initial
 
 To add repository secrets:
 
-1. Navigate to: `https://github.com/barbaarintasan-ship-it/barbaarintasan-staging2/settings/secrets/actions`
+1. Navigate to: `https://github.com/your-org/your-repo/settings/secrets/actions`
 2. Click "New repository secret"
 3. Add each required secret:
    - Name: `DATABASE_URL`
