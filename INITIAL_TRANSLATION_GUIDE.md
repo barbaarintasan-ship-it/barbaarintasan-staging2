@@ -5,6 +5,24 @@ This guide explains how to run the initial batch translation job to populate Eng
 
 ---
 
+## 🚀 Quick Start
+
+```bash
+# 1. Set environment variables
+export DATABASE_URL="postgresql://user:password@host:port/database"
+export OPENAI_API_KEY="sk-your-openai-api-key"
+
+# 2. Run initial translation
+npm run translate:initial
+
+# 3. Check status (after 24 hours)
+npm run translate:status
+```
+
+**That's it!** The script will create translation jobs and OpenAI will process them within 24 hours.
+
+---
+
 ## Overview
 
 The Barbaarintasan Academy application is primarily in Somali but supports English translations. This script will:
@@ -168,7 +186,19 @@ The script outputs:
 
 ## Monitoring Job Progress
 
-### Option 1: Use the Translation Manager CLI
+### Option 1: Use the Status Check Script (Easiest)
+
+```bash
+npm run translate:status
+```
+
+This script:
+- ✅ No server or admin auth required
+- ✅ Shows translation counts by content type
+- ✅ Lists recent batch jobs
+- ✅ Provides next steps based on current status
+
+### Option 2: Use the Translation Manager CLI
 
 ```bash
 export ADMIN_COOKIE="your-admin-session-cookie"
@@ -181,7 +211,7 @@ This provides an interactive menu to:
 - Generate coverage reports
 - View statistics
 
-### Option 2: Use the API directly
+### Option 3: Use the API directly
 
 Start the development server:
 ```bash
@@ -204,7 +234,7 @@ curl -X GET http://localhost:8080/api/admin/batch-jobs/translation-coverage \
   -H "Cookie: your-admin-session"
 ```
 
-### Option 3: Check the OpenAI Dashboard
+### Option 4: Check the OpenAI Dashboard
 
 1. Log in to [platform.openai.com](https://platform.openai.com)
 2. Navigate to "Batch" section
