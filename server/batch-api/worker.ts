@@ -13,7 +13,7 @@ import {
   parentMessages,
   bedtimeStories 
 } from '@shared/schema';
-import { isNull, eq, and, sql, notInArray, notExists } from 'drizzle-orm';
+import { isNull, eq, and, sql, notInArray } from 'drizzle-orm';
 import {
   createTranslationBatchInput,
   createSummaryBatchInput,

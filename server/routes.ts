@@ -12,7 +12,7 @@ import multer from "multer";
 import { initializeWebSocket, broadcastNewMessage, broadcastVoiceRoomUpdate, broadcastMessageStatus, broadcastAppreciation, getOnlineUsers } from "./websocket/presence";
 import { insertUserSchema, insertCourseSchema, insertLessonSchema, insertQuizSchema, insertQuizQuestionSchema, insertPaymentSubmissionSchema, insertTestimonialSchema, insertAssignmentSubmissionSchema, insertDailyTipScheduleSchema, insertResourceSchema, insertExpenseSchema, insertBankTransferSchema, receiptFingerprints, commentReactions, parents, pushSubscriptions, pushBroadcastLogs, enrollments, translations, type Parent, type PushSubscription } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { registerObjectStorageRoutes, ObjectStorageService, objectStorageClient } from "./replit_integrations/object_storage";
 import { generateImageBuffer } from "./replit_integrations/image/client";
@@ -246,7 +246,7 @@ async function applyTranslationsToArray<T extends Record<string, any> & { id: st
     .where(
       and(
         eq(translations.entityType, entityType),
-        sql`${translations.entityId} = ANY(${entityIds})`,
+        inArray(translations.entityId, entityIds),
         eq(translations.targetLanguage, language === 'en' ? 'english' : language)
       )
     );
