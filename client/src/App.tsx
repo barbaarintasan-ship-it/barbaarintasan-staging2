@@ -188,6 +188,7 @@ function Router() {
     "/dhambaal",
     "/waalid/feed",
     "/baraha",
+    "/reset-password",
   ];
   
   const hiddenNavExactPaths = [
@@ -198,8 +199,7 @@ function Router() {
   
   const showBottomNav = 
     !hiddenNavPaths.some(path => location.includes(path)) &&
-    !hiddenNavExactPaths.includes(location) &&
-    !location.startsWith("/reset-password");
+    !hiddenNavExactPaths.includes(location);
 
   return (
     <div className="bg-gradient-to-b from-blue-100 via-blue-50 to-blue-100 min-h-screen flex flex-col lg:items-center font-semibold">
