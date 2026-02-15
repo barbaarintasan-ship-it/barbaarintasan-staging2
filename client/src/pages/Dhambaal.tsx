@@ -38,6 +38,7 @@ import { useParentAuth } from "@/contexts/ParentAuthContext";
 import { toast } from "sonner";
 import { ShareButton, ContentReactions, ContentComments, ThankYouModal } from "@/components/engagement";
 import DhambaalDiscussionGroup from "@/components/DhambaalDiscussionGroup";
+import { useLanguage } from "@/hooks/useLanguage";
 
 function getProxyAudioUrl(audioUrl: string | null): string | null {
   if (!audioUrl) return null;
@@ -66,6 +67,7 @@ interface ParentMessage {
 const AUTOPLAY_DELAY_MS = 300;
 
 export default function Dhambaal() {
+  const { apiLanguage } = useLanguage();
   const [, setLocation] = useLocation();
   const [selectedMessage, setSelectedMessage] = useState<ParentMessage | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -249,11 +251,11 @@ export default function Dhambaal() {
   }, [selectedMessage?.id]);
 
   const { data: todayMessage, isLoading: loadingToday } = useQuery<ParentMessage>({
-    queryKey: ["/api/parent-messages/today"],
+    queryKey: [`/api/parent-messages/today?lang=${apiLanguage}`],
   });
 
   const { data: allMessages, isLoading: loadingAll } = useQuery<ParentMessage[]>({
-    queryKey: ["/api/parent-messages"],
+    queryKey: [`/api/parent-messages?lang=${apiLanguage}`],
   });
 
   const { data: dhambaalProgress = [] } = useQuery<{ contentId: string }[]>({
@@ -330,8 +332,8 @@ export default function Dhambaal() {
       return res.json();
     },
     onSuccess: (updatedMessage) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/parent-messages"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/parent-messages/today"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/parent-messages?lang=${apiLanguage}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/parent-messages/today?lang=${apiLanguage}`] });
       setSelectedMessage(updatedMessage);
       setIsEditing(false);
       toast.success("Dhambaalka waa la cusboonaysiiyay!");
@@ -351,8 +353,8 @@ export default function Dhambaal() {
       return res.json();
     },
     onSuccess: (updatedMessage) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/parent-messages"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/parent-messages/today"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/parent-messages?lang=${apiLanguage}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/parent-messages/today?lang=${apiLanguage}`] });
       setSelectedMessage(updatedMessage);
       toast.success("Codka waa la sameeyay!");
     },
