@@ -58,10 +58,10 @@ function getOpenAIClient(): OpenAI {
 }
 
 /**
- * Generate translation prompts for Somali → English → Arabic
+ * Generate translation prompts for Somali → English
  */
-function generateTranslationPrompt(text: string, targetLanguage: 'english' | 'arabic'): string {
-  const targetLangName = targetLanguage === 'english' ? 'English' : 'Arabic';
+function generateTranslationPrompt(text: string, targetLanguage: 'english'): string {
+  const targetLangName = 'English';
   
   return `Translate the following Somali text to ${targetLangName}. Maintain the educational tone and context. Return only the translation without any additional explanation or formatting.
 
