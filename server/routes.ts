@@ -26,6 +26,7 @@ import { sendEmail, sendPurchaseConfirmationEmail, sendWelcomeEmail, sendPasswor
 import { registerLearningGroupRoutes } from "./learningGroups";
 import { registerLessonGroupRoutes } from "./lessonGroups";
 import { registerDhambaalDiscussionRoutes } from "./dhambaalDiscussion";
+import { registerBatchApiRoutes } from "./batch-api/routes";
 import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
 import { getParentingHelp, checkRateLimit } from "./ai/parenting-help";
@@ -9918,6 +9919,9 @@ Make it a warm, realistic scene showing Somali family life and parenting.`
 
   // Register dhambaal discussion routes (Wadahadal Dhambaalka)
   registerDhambaalDiscussionRoutes(app);
+
+  // Register OpenAI Batch API routes (Bulk Translation & Content Generation)
+  registerBatchApiRoutes(app);
 
   // Register video proxy routes (Google Drive video streaming)
   app.use(videoProxyRouter);

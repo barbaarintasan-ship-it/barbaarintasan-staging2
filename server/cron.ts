@@ -15,6 +15,7 @@ import {
 import { generateDailyBedtimeStory } from "./bedtimeStories";
 import { generateAndSaveParentMessage } from "./parentMessages";
 import { db } from "./db";
+import { runBatchWorker, checkAllBatchJobsStatus } from "./batch-api";
 import {
   enrollments,
   appointments,
@@ -978,8 +979,30 @@ export function startCronJobs() {
     await sendInactiveParentNotifications();
   });
 
+  // Run OpenAI Batch API worker every night at 2:00 AM East Africa Time
+  cron.schedule("0 2 * * *", async () => {
+    console.log("[CRON] Running OpenAI Batch API worker for bulk translations and content generation...");
+    try {
+      await runBatchWorker();
+      console.log("[CRON] Batch API worker completed successfully");
+    } catch (error) {
+      console.error("[CRON] Failed to run batch API worker:", error);
+    }
+  }, { timezone: "Africa/Mogadishu" });
+
+  // Check batch job status every hour
+  cron.schedule("30 * * * *", async () => {
+    console.log("[CRON] Checking OpenAI Batch API job status...");
+    try {
+      await checkAllBatchJobsStatus();
+      console.log("[CRON] Batch API status check completed");
+    } catch (error) {
+      console.error("[CRON] Failed to check batch API status:", error);
+    }
+  }, { timezone: "Africa/Mogadishu" });
+
   console.log(
-    "[CRON] Cron jobs scheduled (subscriptions hourly, events 30min, appointments 15min, AI tips every 3h (6AM-9PM EAT), flashcards 7AM, parent message 8AM, bedtime story 8AM EAT, bedtime notification 6PM, daily reminders hourly, inactive re-engagement every 6h)",
+    "[CRON] Cron jobs scheduled (subscriptions hourly, events 30min, appointments 15min, AI tips every 3h (6AM-9PM EAT), flashcards 7AM, parent message 8AM, bedtime story 8AM EAT, bedtime notification 6PM, daily reminders hourly, inactive re-engagement every 6h, batch worker 2AM EAT, batch status check hourly)",
   );
 
   setTimeout(async () => {
