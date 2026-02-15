@@ -7809,7 +7809,7 @@ Return a JSON object with:
   // Admin: Get lesson accessibility report - shows which lessons are free/accessible
   app.get("/api/admin/lesson-accessibility-report", requireAuth, async (req, res) => {
     try {
-      const courses = await storage.getCourses();
+      const courses = await storage.getAllCourses();
       const report = [];
 
       for (const course of courses) {
