@@ -2078,3 +2078,49 @@ export const googleMeetEvents = pgTable("google_meet_events", {
 export const insertGoogleMeetEventSchema = createInsertSchema(googleMeetEvents).omit({ id: true, createdAt: true });
 export type InsertGoogleMeetEvent = z.infer<typeof insertGoogleMeetEventSchema>;
 export type GoogleMeetEvent = typeof googleMeetEvents.$inferSelect;
+
+// ============================================
+// OPENAI BATCH API PROCESSING
+// ============================================
+
+// Batch Jobs table - tracks OpenAI batch API jobs
+export const batchJobs = pgTable("batch_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  batchId: text("batch_id"), // OpenAI batch job ID
+  type: text("type").notNull(), // 'translation', 'summary', 'quiz_improvement'
+  status: text("status").notNull().default("pending"), // pending, processing, completed, failed, cancelled
+  inputFileId: text("input_file_id"), // OpenAI file ID for input
+  outputFileId: text("output_file_id"), // OpenAI file ID for output
+  errorFileId: text("error_file_id"), // OpenAI file ID for errors
+  totalRequests: integer("total_requests").notNull().default(0),
+  completedRequests: integer("completed_requests").notNull().default(0),
+  failedRequests: integer("failed_requests").notNull().default(0),
+  metadata: text("metadata"), // JSON string with additional info
+  error: text("error"), // Error message if failed
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const insertBatchJobSchema = createInsertSchema(batchJobs).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertBatchJob = z.infer<typeof insertBatchJobSchema>;
+export type BatchJob = typeof batchJobs.$inferSelect;
+
+// Batch Job Items table - tracks individual items within a batch
+export const batchJobItems = pgTable("batch_job_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  batchJobId: varchar("batch_job_id").notNull().references(() => batchJobs.id, { onDelete: "cascade" }),
+  entityType: text("entity_type").notNull(), // 'lesson', 'quiz_question', etc.
+  entityId: varchar("entity_id").notNull(), // ID of the lesson/quiz/etc.
+  customId: text("custom_id").notNull(), // Custom ID for tracking in batch request
+  status: text("status").notNull().default("pending"), // pending, completed, failed
+  request: text("request"), // JSON string of the request
+  response: text("response"), // JSON string of the response
+  error: text("error"), // Error message if failed
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  processedAt: timestamp("processed_at"),
+});
+
+export const insertBatchJobItemSchema = createInsertSchema(batchJobItems).omit({ id: true, createdAt: true });
+export type InsertBatchJobItem = z.infer<typeof insertBatchJobItemSchema>;
+export type BatchJobItem = typeof batchJobItems.$inferSelect;
