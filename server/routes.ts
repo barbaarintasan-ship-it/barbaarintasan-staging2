@@ -27,7 +27,7 @@ import { registerLearningGroupRoutes } from "./learningGroups";
 import { registerLessonGroupRoutes } from "./lessonGroups";
 import { registerDhambaalDiscussionRoutes } from "./dhambaalDiscussion";
 import { registerBatchApiRoutes } from "./batch-api/routes";
-import { isSomaliLanguage } from "./utils/translations";
+import { isSomaliLanguage, normalizeLanguageCode } from "./utils/translations";
 import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
 import { getParentingHelp, checkRateLimit } from "./ai/parenting-help";
@@ -206,7 +206,7 @@ async function applyTranslations<T extends Record<string, any>>(
       and(
         eq(translations.entityType, entityType),
         eq(translations.entityId, entityId),
-        eq(translations.targetLanguage, language === 'en' ? 'english' : language)
+        eq(translations.targetLanguage, normalizeLanguageCode(language))
       )
     );
 
@@ -248,7 +248,7 @@ async function applyTranslationsToArray<T extends Record<string, any> & { id: st
       and(
         eq(translations.entityType, entityType),
         inArray(translations.entityId, entityIds),
-        eq(translations.targetLanguage, language === 'en' ? 'english' : language)
+        eq(translations.targetLanguage, normalizeLanguageCode(language))
       )
     );
 

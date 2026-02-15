@@ -10,3 +10,12 @@
 export function isSomaliLanguage(language: string | undefined): boolean {
   return !language || language === 'so' || language === 'somali';
 }
+
+/**
+ * Normalizes language codes to database format
+ * @param language - Language code to normalize
+ * @returns Normalized language code for database queries
+ */
+export function normalizeLanguageCode(language: string): string {
+  return language === 'en' ? 'english' : language;
+}
