@@ -150,6 +150,9 @@ For each entity type with untranslated content:
 - `POST /api/admin/batch-jobs/:id/check-status` - Check job status
 - `POST /api/admin/batch-jobs/check-all-status` - Check all pending jobs
 - `GET /api/admin/batch-jobs/stats` - View statistics
+- `GET /api/admin/batch-jobs/translation-coverage` - Get translation coverage report (JSON)
+- `GET /api/admin/batch-jobs/translation-coverage?format=text&lang=somali` - Get text report in Somali
+- `GET /api/admin/batch-jobs/translation-coverage?format=text&lang=english` - Get text report in English
 
 ### Content Endpoints (with language support)
 All these endpoints accept `?lang=en` parameter:
@@ -235,15 +238,59 @@ All these endpoints accept `?lang=en` parameter:
 - Add translation quality feedback mechanism
 - Implement incremental updates (only translate new content)
 - Add webhook notifications for job completion
-- Create translation coverage reports
+- ~~Create translation coverage reports~~ ✅ COMPLETED
 - Support for A/B testing different translations
+
+## Helper Tools
+
+### Translation Manager CLI
+A command-line tool for easy translation management:
+
+```bash
+# Set your admin session cookie
+export ADMIN_COOKIE="your-session-cookie-here"
+
+# Run the translation manager
+node scripts/translation-manager.js
+```
+
+Features:
+- ✅ Start comprehensive translation jobs
+- ✅ View all jobs and their status
+- ✅ Check specific job details
+- ✅ Update all job statuses
+- ✅ Generate coverage reports (JSON or text)
+- ✅ View translation statistics
+- ✅ Bilingual interface (Somali/English)
+
+### Coverage Reports
+Generate detailed translation coverage reports via API:
+
+```bash
+# JSON format
+curl http://localhost:8080/api/admin/batch-jobs/translation-coverage
+
+# Text format (Somali)
+curl "http://localhost:8080/api/admin/batch-jobs/translation-coverage?format=text&lang=somali"
+
+# Text format (English)
+curl "http://localhost:8080/api/admin/batch-jobs/translation-coverage?format=text&lang=english"
+```
+
+Reports include:
+- 📊 Overall translation coverage percentage
+- 📈 Coverage by content type (courses, lessons, etc.)
+- 📚 Field-level translation status
+- 🔄 Recent batch jobs
+- ❌ Failed translations and errors
 
 ## Files Modified
 
 ### Backend
 - `server/batch-api/worker.ts` - Enhanced to handle all content types
 - `server/batch-api/service.ts` - Made generic for any entity type
-- `server/batch-api/routes.ts` - Added comprehensive translation endpoint
+- `server/batch-api/routes.ts` - Added comprehensive translation endpoint and coverage report
+- `server/batch-api/report.ts` - **NEW** Translation coverage report generator
 - `server/routes.ts` - Added translation helper functions
 - `server/bedtimeStories.ts` - Added translation support
 - `server/parentMessages.ts` - Added translation support
@@ -258,6 +305,11 @@ All these endpoints accept `?lang=en` parameter:
 - `client/src/pages/Maaweelo.tsx` - Added language parameter
 - `client/src/pages/Home.tsx` - Added language parameter
 - `client/src/components/TopBar.tsx` - Added LanguageSwitcher
+
+### Documentation & Tools
+- `docs/TRANSLATION_USAGE_GUIDE.md` - **NEW** Comprehensive usage guide (Somali/English)
+- `scripts/translation-manager.js` - **NEW** CLI tool for translation management
+- `BILINGUAL_SYSTEM_GUIDE.md` - Updated with new features
 
 ## Support
 
