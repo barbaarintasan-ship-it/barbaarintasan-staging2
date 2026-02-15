@@ -178,7 +178,30 @@ function Router() {
   const [location] = useLocation();
   const [isChatOpen, setIsChatOpen] = useState(false);
   
-  const showBottomNav = !location.includes("/lesson/") && !location.includes("/admin") && !location.includes("/assessment") && !location.includes("/share-info") && !location.includes("/maaweelo") && !location.includes("/dhambaal") && !location.includes("/waalid/feed") && !location.includes("/baraha");
+  // Pages where BottomNav should be hidden
+  // Note: wouter's useLocation() returns pathname only (no query parameters)
+  const hiddenNavPaths = [
+    "/lesson/",
+    "/admin",
+    "/assessment",
+    "/share-info",
+    "/maaweelo",
+    "/dhambaal",
+    "/waalid/feed",
+    "/baraha",
+    "/reset-password", // Matches /reset-password and /reset-password/* routes
+  ];
+  
+  // Exact path matches for authentication pages
+  const hiddenNavExactPaths = [
+    "/register",
+    "/login",
+    "/forgot-password",
+  ];
+  
+  const showBottomNav = 
+    !hiddenNavPaths.some(path => location.includes(path)) &&
+    !hiddenNavExactPaths.includes(location);
 
   return (
     <div className="bg-gradient-to-b from-blue-100 via-blue-50 to-blue-100 min-h-screen flex flex-col lg:items-center font-semibold">
