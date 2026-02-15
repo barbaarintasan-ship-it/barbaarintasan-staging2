@@ -18,6 +18,10 @@ import {
   processBatchJobResults,
   cancelBatchJob
 } from './service';
+import {
+  generateTranslationCoverageReport,
+  formatReportAsText
+} from './report';
 
 /**
  * Check if user is admin
@@ -282,6 +286,30 @@ export function registerBatchApiRoutes(app: Express) {
     } catch (err) {
       console.error('[Batch API Routes] Error fetching stats:', err);
       res.status(500).json({ error: 'Failed to fetch batch job statistics' });
+    }
+  });
+
+  // Get translation coverage report
+  app.get('/api/admin/batch-jobs/translation-coverage', async (req: Request, res: Response) => {
+    try {
+      if (!(await isAdmin(req))) {
+        return res.status(401).json({ error: 'Unauthorized - Admin access required' });
+      }
+
+      const format = req.query.format as string || 'json';
+      const language = req.query.lang as 'somali' | 'english' || 'english';
+
+      const report = await generateTranslationCoverageReport();
+
+      if (format === 'text') {
+        const textReport = formatReportAsText(report, language);
+        res.type('text/plain').send(textReport);
+      } else {
+        res.json(report);
+      }
+    } catch (err) {
+      console.error('[Batch API Routes] Error generating coverage report:', err);
+      res.status(500).json({ error: 'Failed to generate translation coverage report' });
     }
   });
 
