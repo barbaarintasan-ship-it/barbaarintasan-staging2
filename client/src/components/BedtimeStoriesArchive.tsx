@@ -79,6 +79,14 @@ export default function BedtimeStoriesArchive({ onBack }: BedtimeStoriesArchiveP
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const pauseCurrentAudio = () => {
+    const audio = audioRef.current;
+    if (audio && !audio.paused) {
+      audio.pause();
+      setIsPlaying(false);
+    }
+  };
+
   const toggleAudio = () => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -142,6 +150,7 @@ export default function BedtimeStoriesArchive({ onBack }: BedtimeStoriesArchiveP
     if (isFirstStory || currentStoryIndex < 0) return;
     const previousStory = stories[currentStoryIndex - 1];
     if (previousStory) {
+      pauseCurrentAudio();
       setSelectedStory(previousStory);
       setCurrentImageIndex(0);
     }
@@ -151,6 +160,7 @@ export default function BedtimeStoriesArchive({ onBack }: BedtimeStoriesArchiveP
     if (isLastStory || currentStoryIndex < 0) return;
     const nextStory = stories[currentStoryIndex + 1];
     if (nextStory) {
+      pauseCurrentAudio();
       setSelectedStory(nextStory);
       setCurrentImageIndex(0);
     }

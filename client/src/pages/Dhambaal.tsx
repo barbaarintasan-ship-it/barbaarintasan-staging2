@@ -91,6 +91,14 @@ export default function Dhambaal() {
   const isAdmin = parent?.isAdmin;
 
   // Audio player handlers - scroll to images when playing
+  const pauseCurrentAudio = () => {
+    const audio = audioRef.current;
+    if (audio && !audio.paused) {
+      audio.pause();
+      setIsPlaying(false);
+    }
+  };
+
   const toggleAudio = (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -154,6 +162,7 @@ export default function Dhambaal() {
   // Navigate to previous lesson
   const goToPreviousLesson = () => {
     if (!allMessages || allMessages.length === 0 || currentMessageIndex <= 0) return;
+    pauseCurrentAudio();
     setSelectedMessage(allMessages[currentMessageIndex - 1]);
     setCurrentImageIndex(0);
   };
@@ -162,6 +171,7 @@ export default function Dhambaal() {
   const goToNextLesson = () => {
     if (!allMessages || allMessages.length === 0 || currentMessageIndex < 0) return;
     if (currentMessageIndex < allMessages.length - 1) {
+      pauseCurrentAudio();
       setSelectedMessage(allMessages[currentMessageIndex + 1]);
       setCurrentImageIndex(0);
     }
