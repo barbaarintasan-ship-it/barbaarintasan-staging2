@@ -4,6 +4,9 @@ import type { InsertBedtimeStory } from "@shared/schema";
 import { generateBedtimeStoryAudio } from "./tts";
 import { saveMaaweelToGoogleDrive, searchMaaweelByCharacter } from "./googleDrive";
 import OpenAI from "openai";
+import { db } from "./db";
+import { translations } from "@shared/schema";
+import { eq, and, sql } from "drizzle-orm";
 
 // Use Replit AI Integration on Replit, fallback to direct OpenAI on Fly.io
 const useReplitIntegration = !!(process.env.AI_INTEGRATIONS_OPENAI_API_KEY && process.env.AI_INTEGRATIONS_OPENAI_BASE_URL);
@@ -403,11 +406,52 @@ export function clearBedtimeStoriesCache(): void {
   console.log("[Bedtime Stories] Cache cleared");
 }
 
+async function applyTranslationsToStories<T extends Record<string, any> & { id: string }>(
+  stories: T[],
+  language: string
+): Promise<T[]> {
+  if (!language || language === 'so' || language === 'somali' || stories.length === 0) {
+    return stories;
+  }
+
+  const storyIds = stories.map(s => s.id);
+  const allTranslations = await db.select()
+    .from(translations)
+    .where(
+      and(
+        eq(translations.entityType, 'bedtime_story'),
+        sql`${translations.entityId} = ANY(${storyIds})`,
+        eq(translations.targetLanguage, language === 'en' ? 'english' : language)
+      )
+    );
+
+  const translationsByStory = new Map<string, typeof allTranslations>();
+  for (const translation of allTranslations) {
+    if (!translationsByStory.has(translation.entityId)) {
+      translationsByStory.set(translation.entityId, []);
+    }
+    translationsByStory.get(translation.entityId)!.push(translation);
+  }
+
+  return stories.map(story => {
+    const storyTranslations = translationsByStory.get(story.id) || [];
+    const translated = { ...story };
+    for (const t of storyTranslations) {
+      if (['title', 'content', 'moralLesson'].includes(t.fieldName)) {
+        translated[t.fieldName] = t.translatedText;
+      }
+    }
+    return translated;
+  });
+}
+
 export function registerBedtimeStoryRoutes(app: Express): void {
   app.get("/api/bedtime-stories", async (req: Request, res: Response) => {
     try {
       const limit = parseInt(req.query.limit as string) || 30;
-      const stories = await storage.getBedtimeStories(limit);
+      const lang = req.query.lang as string;
+      let stories = await storage.getBedtimeStories(limit);
+      stories = await applyTranslationsToStories(stories, lang);
       res.json(stories);
     } catch (error) {
       console.error("Error fetching bedtime stories:", error);
@@ -433,11 +477,13 @@ export function registerBedtimeStoryRoutes(app: Express): void {
 
   app.get("/api/bedtime-stories/today", async (req: Request, res: Response) => {
     try {
-      const story = await storage.getTodayBedtimeStory();
+      const lang = req.query.lang as string;
+      let story = await storage.getTodayBedtimeStory();
       if (!story) {
         return res.status(404).json({ error: "No story available for today" });
       }
-      res.json(story);
+      const translated = await applyTranslationsToStories([story], lang);
+      res.json(translated[0]);
     } catch (error) {
       console.error("Error fetching today's story:", error);
       res.status(500).json({ error: "Failed to fetch story" });
@@ -446,11 +492,13 @@ export function registerBedtimeStoryRoutes(app: Express): void {
 
   app.get("/api/bedtime-stories/:id", async (req: Request, res: Response) => {
     try {
-      const story = await storage.getBedtimeStory(req.params.id);
+      const lang = req.query.lang as string;
+      let story = await storage.getBedtimeStory(req.params.id);
       if (!story) {
         return res.status(404).json({ error: "Story not found" });
       }
-      res.json(story);
+      const translated = await applyTranslationsToStories([story], lang);
+      res.json(translated[0]);
     } catch (error) {
       console.error("Error fetching story:", error);
       res.status(500).json({ error: "Failed to fetch story" });
