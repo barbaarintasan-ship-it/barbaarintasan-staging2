@@ -7,6 +7,7 @@ import OpenAI from "openai";
 import { db } from "./db";
 import { translations } from "@shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
+import { isSomaliLanguage } from "./utils/translations";
 
 // Use Replit AI Integration on Replit, fallback to direct OpenAI on Fly.io
 const useReplitIntegration = !!(process.env.AI_INTEGRATIONS_OPENAI_API_KEY && process.env.AI_INTEGRATIONS_OPENAI_BASE_URL);
@@ -410,7 +411,7 @@ async function applyTranslationsToStories<T extends Record<string, any> & { id: 
   stories: T[],
   language: string
 ): Promise<T[]> {
-  if (!language || language === 'so' || language === 'somali' || stories.length === 0) {
+  if (isSomaliLanguage(language) || stories.length === 0) {
     return stories;
   }
 

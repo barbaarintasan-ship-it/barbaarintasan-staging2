@@ -27,6 +27,7 @@ import { registerLearningGroupRoutes } from "./learningGroups";
 import { registerLessonGroupRoutes } from "./lessonGroups";
 import { registerDhambaalDiscussionRoutes } from "./dhambaalDiscussion";
 import { registerBatchApiRoutes } from "./batch-api/routes";
+import { isSomaliLanguage } from "./utils/translations";
 import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
 import { getParentingHelp, checkRateLimit } from "./ai/parenting-help";
@@ -194,7 +195,7 @@ async function applyTranslations<T extends Record<string, any>>(
   fields: string[]
 ): Promise<T> {
   // If language is Somali or not specified, return original entity
-  if (!language || language === 'so' || language === 'somali') {
+  if (isSomaliLanguage(language)) {
     return entity;
   }
 
@@ -230,7 +231,7 @@ async function applyTranslationsToArray<T extends Record<string, any> & { id: st
   fields: string[]
 ): Promise<T[]> {
   // If language is Somali or not specified, return original entities
-  if (!language || language === 'so' || language === 'somali') {
+  if (isSomaliLanguage(language)) {
     return entities;
   }
 
