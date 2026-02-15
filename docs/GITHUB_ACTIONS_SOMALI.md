@@ -69,7 +69,7 @@ Ama aad tag website-ka oo doorato luqadda Ingiriisiga (EN) 🌐
 
 ### ⏰ Jobs-ku waa "in_progress" muddo dheer
 
-**Caadi maahan!** OpenAI waxay qaadan kartaa ilaa 24 saac.
+**Caadi ma aha!** OpenAI waxay qaadan kartaa ilaa 24 saac.
 
 **Xal:** Sug oo hubi xaalada marka dambe:
 ```bash
