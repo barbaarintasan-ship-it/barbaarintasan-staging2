@@ -179,6 +179,7 @@ function Router() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   
   // Pages where BottomNav should be hidden
+  // Note: wouter's useLocation() returns pathname only (no query parameters)
   const hiddenNavPaths = [
     "/lesson/",
     "/admin",
@@ -191,6 +192,7 @@ function Router() {
     "/reset-password",
   ];
   
+  // Exact path matches for authentication pages
   const hiddenNavExactPaths = [
     "/register",
     "/login",
