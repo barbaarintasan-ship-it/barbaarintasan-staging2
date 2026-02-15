@@ -227,14 +227,15 @@ export default function Dhambaal() {
         }
         autoPlayTimeoutRef.current = null;
       }, AUTOPLAY_DELAY_MS);
-      
-      return () => {
-        if (autoPlayTimeoutRef.current) {
-          clearTimeout(autoPlayTimeoutRef.current);
-          autoPlayTimeoutRef.current = null;
-        }
-      };
     }
+    
+    // Cleanup function that always runs on unmount or when selectedMessage changes
+    return () => {
+      if (autoPlayTimeoutRef.current) {
+        clearTimeout(autoPlayTimeoutRef.current);
+        autoPlayTimeoutRef.current = null;
+      }
+    };
   }, [selectedMessage?.id]);
 
   const { data: todayMessage, isLoading: loadingToday } = useQuery<ParentMessage>({
