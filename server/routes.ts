@@ -5071,7 +5071,19 @@ Ka jawaab qaabkan JSON ah:
   // Module routes
   app.get("/api/modules", async (req, res) => {
     try {
-      const modulesList = await storage.getAllModules();
+      const lang = req.query.lang as string;
+      let modulesList = await storage.getAllModules();
+      
+      // Apply translations if language is specified
+      if (lang) {
+        modulesList = await applyTranslationsToArray(
+          modulesList,
+          'module',
+          lang,
+          ['title']
+        );
+      }
+      
       res.json(modulesList);
     } catch (error) {
       console.error("Error fetching all modules:", error);
@@ -5081,7 +5093,19 @@ Ka jawaab qaabkan JSON ah:
 
   app.get("/api/courses/:courseId/modules", async (req, res) => {
     try {
-      const modulesList = await storage.getModulesByCourseId(req.params.courseId);
+      const lang = req.query.lang as string;
+      let modulesList = await storage.getModulesByCourseId(req.params.courseId);
+      
+      // Apply translations if language is specified
+      if (lang) {
+        modulesList = await applyTranslationsToArray(
+          modulesList,
+          'module',
+          lang,
+          ['title']
+        );
+      }
+      
       res.json(modulesList);
     } catch (error) {
       console.error("Error fetching modules:", error);
@@ -5126,12 +5150,34 @@ Ka jawaab qaabkan JSON ah:
   // Lesson routes
   app.get("/api/lessons", async (req, res) => {
     try {
-      const { courseId } = req.query;
+      const { courseId, lang } = req.query;
       if (courseId && typeof courseId === "string") {
-        const lessons = await storage.getLessonsByCourseId(courseId);
+        let lessons = await storage.getLessonsByCourseId(courseId);
+        
+        // Apply translations if language is specified
+        if (lang && typeof lang === "string") {
+          lessons = await applyTranslationsToArray(
+            lessons,
+            'lesson',
+            lang,
+            ['title', 'description', 'textContent']
+          );
+        }
+        
         return res.json(lessons);
       }
-      const lessons = await storage.getAllLessons();
+      let lessons = await storage.getAllLessons();
+      
+      // Apply translations if language is specified
+      if (lang && typeof lang === "string") {
+        lessons = await applyTranslationsToArray(
+          lessons,
+          'lesson',
+          lang,
+          ['title', 'description', 'textContent']
+        );
+      }
+      
       res.json(lessons);
     } catch (error) {
       console.error("Error fetching lessons:", error);
@@ -5225,13 +5271,24 @@ Ka jawaab qaabkan JSON ah:
 
   app.get("/api/lessons/:id", async (req, res) => {
     try {
-      const lesson = await storage.getLesson(req.params.id);
+      const lang = req.query.lang as string;
+      let lesson = await storage.getLesson(req.params.id);
       if (!lesson) {
         return res.status(404).json({ error: "Lesson not found" });
       }
       
       // Free lessons are accessible to everyone (including guests)
       if (lesson.isFree) {
+        // Apply translations if language is specified
+        if (lang) {
+          lesson = await applyTranslations(
+            lesson,
+            'lesson',
+            lesson.id,
+            lang,
+            ['title', 'description', 'textContent']
+          );
+        }
         return res.json(lesson);
       }
       
@@ -5269,6 +5326,17 @@ Ka jawaab qaabkan JSON ah:
       }
       
       // Prerequisite check removed - parents can now access any lesson without completing previous ones
+      
+      // Apply translations if language is specified
+      if (lang) {
+        lesson = await applyTranslations(
+          lesson,
+          'lesson',
+          lesson.id,
+          lang,
+          ['title', 'description', 'textContent']
+        );
+      }
       
       res.json(lesson);
     } catch (error) {
@@ -5458,11 +5526,23 @@ Ka jawaab qaabkan JSON ah:
 
   app.get("/api/quiz/:id", async (req, res) => {
     try {
+      const lang = req.query.lang as string;
       const quiz = await storage.getQuiz(req.params.id);
       if (!quiz) {
         return res.status(404).json({ error: "Quiz not found" });
       }
-      const questions = await storage.getQuizQuestions(req.params.id);
+      let questions = await storage.getQuizQuestions(req.params.id);
+      
+      // Apply translations if language is specified
+      if (lang) {
+        questions = await applyTranslationsToArray(
+          questions,
+          'quiz_question',
+          lang,
+          ['question', 'options', 'explanation']
+        );
+      }
+      
       res.json({ ...quiz, questions });
     } catch (error) {
       console.error("Error fetching quiz:", error);
