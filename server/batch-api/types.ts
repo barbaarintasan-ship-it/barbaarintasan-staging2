@@ -9,7 +9,7 @@ export type BatchJobStatus = 'pending' | 'processing' | 'completed' | 'failed' |
 export interface TranslationRequest {
   lessonId: string;
   sourceLanguage: 'somali';
-  targetLanguages: ['english', 'arabic'];
+  targetLanguages: ['english'];
   fields: {
     title?: string;
     description?: string;

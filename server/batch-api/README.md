@@ -4,7 +4,7 @@ This module provides cost-effective bulk processing of educational content using
 
 ## Features
 
-- **Bulk Translation**: Translate lessons from Somali → English → Arabic
+- **Bulk Translation**: Translate lessons from Somali → English
 - **Content Summaries**: Generate summaries and learning objectives
 - **Quiz Improvements**: Enhance quiz questions for better clarity
 - **Background Processing**: Automated nightly processing via cron jobs
@@ -163,9 +163,9 @@ GET /api/admin/batch-jobs/stats
 
 ## Translation Prompts
 
-### Somali → English/Arabic
+### Somali → English
 ```
-Translate the following Somali text to [English/Arabic]. 
+Translate the following Somali text to English. 
 Maintain the educational tone and context. 
 Return only the translation without any additional explanation.
 
