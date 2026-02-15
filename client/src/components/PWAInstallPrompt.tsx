@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useLocation } from 'wouter';
+import { useIsAuthPage } from '@/hooks/useIsAuthPage';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -9,7 +9,6 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function PWAInstallPrompt() {
-  const [location] = useLocation();
   const [showFab, setShowFab] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -18,8 +17,7 @@ export function PWAInstallPrompt() {
   const [installed, setInstalled] = useState(false);
 
   // Don't show on auth pages
-  const isAuthPage = location === "/register" || location === "/login" || 
-                     location === "/forgot-password" || location.startsWith("/reset-password");
+  const isAuthPage = useIsAuthPage();
 
   useEffect(() => {
     const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || 

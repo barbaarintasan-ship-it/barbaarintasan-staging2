@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useParentAuth } from "@/contexts/ParentAuthContext";
+import { useIsAuthPage } from "@/hooks/useIsAuthPage";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -31,8 +32,7 @@ export default function BottomNav() {
   const [showSocialSection, setShowSocialSection] = useState(false);
 
   // Check if current page is an authentication page
-  const isAuthPage = location === "/register" || location === "/login" || 
-                     location === "/forgot-password" || location.startsWith("/reset-password");
+  const isAuthPage = useIsAuthPage();
 
   // Focus mode check from URL hash - reactive to hash changes
   const [isFocusMode, setIsFocusMode] = useState(
