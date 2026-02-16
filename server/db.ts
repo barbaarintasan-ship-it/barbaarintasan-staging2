@@ -7,7 +7,8 @@ neonConfig.webSocketConstructor = ws;
 
 // Fallback connection string for when DATABASE_URL is not set
 // This allows the server to start without crashing, but database operations will fail
-export const FALLBACK_DATABASE_URL = 'postgresql://dummy:dummy@localhost:5432/dummy';
+// Uses obviously invalid format to prevent accidental connection attempts
+export const FALLBACK_DATABASE_URL = 'postgresql://MISSING:MISSING@invalid/invalid';
 
 // Validate DATABASE_URL format to prevent cryptic "helium" DNS errors
 function validateDatabaseUrl(url: string): void {
@@ -92,9 +93,8 @@ async function warmupPool() {
     console.log('[DB Pool] Connection warmed up successfully');
   } catch (err: unknown) {
     const isHeliumError = checkForHeliumError(err, 'Warmup');
-    if (isHeliumError) {
-      console.error('[DB Pool] Database connection failed: DATABASE_URL is malformed (defaulting to "helium" hostname)');
-    } else {
+    if (!isHeliumError) {
+      // Only log non-helium errors here (helium errors already logged by checkForHeliumError)
       console.error('[DB Pool] Warmup failed:', err);
     }
     // Don't throw - allow server to start even if database is unavailable

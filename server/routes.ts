@@ -426,9 +426,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   if (isProduction && !sessionSecret) {
     console.warn('[SESSION] WARNING: SESSION_SECRET not set in production. Using cryptographically secure fallback.');
     console.warn('[SESSION] Sessions will not persist across server restarts. Set SESSION_SECRET for production use.');
+    console.warn('[SESSION] NOTE: Users will be logged out on every deployment without a proper SESSION_SECRET.');
   }
   
   // Use a cryptographically secure random session secret as fallback
+  // WARNING: This will invalidate all existing sessions on restart
+  // In production, SESSION_SECRET should always be set to avoid this
   const effectiveSecret = sessionSecret || crypto.randomBytes(32).toString('hex');
   
   app.use(
