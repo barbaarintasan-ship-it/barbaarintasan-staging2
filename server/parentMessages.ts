@@ -440,7 +440,7 @@ export function registerParentMessageRoutes(app: Express): void {
       const lang = req.query.lang as string;
       let message = await storage.getTodayParentMessage();
       if (!message) {
-        return res.status(404).json({ error: "Dhambaalka maanta lama helin" });
+        return res.json(null);
       }
       const translated = await applyTranslationsToMessages([message], lang);
       res.json(translated[0]);
