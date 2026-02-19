@@ -145,11 +145,6 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {messageType === "iibso" && (
-        <div className="bg-gradient-to-r from-amber-400 to-yellow-500 text-amber-900 p-3 text-center font-bold text-sm">
-          Fadlan soo gal si aad u iibsato xubin dahabi ah!
-        </div>
-      )}
 
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">
         <div className="w-full max-w-[400px]">

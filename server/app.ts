@@ -2,6 +2,7 @@ import { type Server } from "node:http";
 import path from "node:path";
 
 import express, { type Express, type Request, Response, NextFunction } from "express";
+import compression from "compression";
 import { registerRoutes, registerHealthCheck } from "./routes";
 import { startCronJobs } from "./cron";
 import { runMigrations } from 'stripe-replit-sync';
@@ -43,6 +44,15 @@ app.use('/course-images', express.static(courseImagesPath));
 
 // Register health check endpoint first (before any middleware that might slow it down)
 registerHealthCheck(app);
+
+app.use(compression({
+  level: 6,
+  threshold: 1024,
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) return false;
+    return compression.filter(req, res);
+  }
+}));
 
 // Initialize Stripe schema and sync data
 async function initStripe() {
