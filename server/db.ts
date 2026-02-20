@@ -1,8 +1,9 @@
-import pg from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import ws from 'ws';
 import * as schema from "@shared/schema";
 
-const { Pool } = pg;
+neonConfig.webSocketConstructor = ws;
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -60,8 +61,7 @@ async function warmupPool() {
     client.release();
     console.log('[DB Pool] Connection warmed up successfully');
   } catch (err: unknown) {
-    console.error('[DB Pool] Warmup failed:', err);
-    throw err;
+    console.error('[DB Pool] Warmup failed (non-fatal):', err);
   }
 }
 warmupPool();
