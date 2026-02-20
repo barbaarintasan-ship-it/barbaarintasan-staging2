@@ -15716,6 +15716,111 @@ MUHIIM: Soo celi JSON keliya, wax kale ha ku darin.`;
     }
   });
 
+  // Admin: Import lost parent user data (re-creates accounts from a WP-export JSON)
+  app.post("/api/admin/import-parents", async (req, res) => {
+    try {
+      const parentId = (req.session as any)?.parentId;
+      if (parentId) {
+        const parent = await storage.getParent(parentId);
+        if (!parent?.isAdmin) {
+          return res.status(403).json({ error: "Admin only" });
+        }
+      } else if (req.session.userId) {
+        const user = await storage.getUser(req.session.userId);
+        if (!user?.isAdmin) {
+          return res.status(403).json({ error: "Admin only" });
+        }
+      } else {
+        return res.status(401).json({ error: "Admin login required" });
+      }
+
+      const { users: importedUsers } = req.body;
+      if (!importedUsers || !Array.isArray(importedUsers) || importedUsers.length === 0) {
+        return res.status(400).json({ error: "No user data provided. Expected { users: [...] }" });
+      }
+
+      console.log(`[IMPORT-PARENTS] Admin importing ${importedUsers.length} parent records`);
+
+      const allCourses = await storage.getAllCourses();
+      const coursesByExternalId = new Map(allCourses.map(c => [c.courseId, c]));
+
+      let importedCount = 0;
+      let skippedCount = 0;
+      let enrollmentsImported = 0;
+      const errors: string[] = [];
+
+      for (const u of importedUsers) {
+        if (!u.email || !u.name) {
+          errors.push(`Skipped entry without email/name`);
+          skippedCount++;
+          continue;
+        }
+
+        // Skip if already exists
+        const existing = await storage.getParentByEmail(u.email);
+        if (existing) {
+          skippedCount++;
+          continue;
+        }
+
+        try {
+          const newParent = await storage.createParent({
+            email: u.email,
+            name: u.name,
+            // passwordHash is the bcrypt hash from the app's own export – same format
+            password: u.passwordHash || null,
+            phone: u.phone || null,
+            country: u.country || null,
+            city: u.city || null,
+            createdAt: u.createdAt ? new Date(u.createdAt) : new Date(),
+          });
+
+          importedCount++;
+
+          // Re-create active enrollments if present
+          if (Array.isArray(u.enrollments)) {
+            for (const enr of u.enrollments) {
+              const course = coursesByExternalId.get(enr.courseId);
+              if (!course) continue;
+              try {
+                await storage.createEnrollment({
+                  parentId: newParent.id,
+                  courseId: course.id,
+                  planType: enr.planType || "lifetime",
+                  accessStart: enr.accessStart ? new Date(enr.accessStart) : new Date(),
+                  accessEnd: enr.accessEnd ? new Date(enr.accessEnd) : null,
+                  status: "active",
+                });
+                enrollmentsImported++;
+              } catch (enrErr: any) {
+                errors.push(`Enrollment error for ${u.email} / ${enr.courseId}: ${enrErr.message}`);
+              }
+            }
+          }
+        } catch (createErr: any) {
+          errors.push(`Failed to create ${u.email}: ${createErr.message}`);
+          skippedCount++;
+        }
+      }
+
+      const MAX_IMPORT_ERRORS_RETURNED = 20;
+
+      console.log(`[IMPORT-PARENTS] Done: ${importedCount} imported, ${skippedCount} skipped, ${enrollmentsImported} enrollments`);
+
+      res.json({
+        success: true,
+        message: `${importedCount} parent(s) restored, ${skippedCount} skipped (already exist), ${enrollmentsImported} enrollment(s) restored`,
+        importedCount,
+        skippedCount,
+        enrollmentsImported,
+        errors: errors.slice(0, MAX_IMPORT_ERRORS_RETURNED),
+      });
+    } catch (error: any) {
+      console.error("[IMPORT-PARENTS] Error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ==================== WORDPRESS USER SYNC ====================
   // Sync new user registrations from App → WordPress
   const WORDPRESS_SITE_URL = 'https://barbaarintasan.com';

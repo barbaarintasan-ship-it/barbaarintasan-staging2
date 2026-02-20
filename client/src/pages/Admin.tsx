@@ -689,6 +689,7 @@ export default function Admin() {
   const [accessibilityReport, setAccessibilityReport] = useState<any>(null);
   const [isLoadingAccessibilityReport, setIsLoadingAccessibilityReport] = useState(false);
   const [isExportingUsersWP, setIsExportingUsersWP] = useState(false);
+  const [isImportingParents, setIsImportingParents] = useState(false);
   
   // Content Creator states
   const [contentType, setContentType] = useState<"dhambaal" | "sheeko">("dhambaal");
@@ -1082,6 +1083,42 @@ export default function Admin() {
     } finally {
       setIsExportingUsersWP(false);
     }
+  };
+
+  // Import Parents Handler (recover lost user data)
+  const handleImportParents = async () => {
+    if (isImportingParents) return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e: any) => {
+      const file = e.target?.files?.[0];
+      if (!file) return;
+      setIsImportingParents(true);
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        const res = await fetch("/api/admin/import-parents", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(data),
+        });
+        const result = await res.json();
+        if (res.ok) {
+          toast.success(result.message || "Parents waa la soo dejiyay!");
+          queryClient.invalidateQueries({ queryKey: ["/api/admin/parents"] });
+        } else {
+          toast.error(result.error || "Import-ku wuu fashilmay");
+        }
+      } catch (error) {
+        console.error("Parents import error:", error);
+        toast.error("File-ka JSON-ka ma aha sax");
+      } finally {
+        setIsImportingParents(false);
+      }
+    };
+    input.click();
   };
 
   // Import Content Handler
@@ -8775,6 +8812,15 @@ ${baseUrl}/maaweelo`;
                           data-testid="btn-export-users-wp"
                         >
                           {isExportingUsersWP ? "⏳ Exporting..." : "🔄 WordPress Export"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleImportParents}
+                          disabled={isImportingParents}
+                          data-testid="btn-import-parents"
+                        >
+                          {isImportingParents ? "⏳ Importing..." : "📤 Import Users"}
                         </Button>
                       </div>
                       <div className="flex gap-2 text-sm text-gray-500">
