@@ -258,6 +258,9 @@ function bsa_payment_settings_page() {
                     </td>
                 </tr>
                 <tr><td colspan="2"><hr style="border-top: 2px solid #e5e7eb;"></td></tr>
+                <tr style="background: #fff7ed;">
+                    <th colspan="2" style="color: #c2410c; font-weight: bold; font-size: 1.05em;">&#128178; Stripe Settings</th>
+                </tr>
                 <tr>
                     <th>Stripe Publishable Key</th>
                     <td><input type="text" name="bsa_stripe_publishable_key" value="<?php echo esc_attr(get_option('bsa_stripe_publishable_key', '')); ?>" class="regular-text" placeholder="pk_live_..." /></td>
@@ -266,10 +269,23 @@ function bsa_payment_settings_page() {
                     <th>Stripe Secret Key</th>
                     <td><input type="password" name="bsa_stripe_secret_key" value="<?php echo esc_attr(get_option('bsa_stripe_secret_key', '')); ?>" class="regular-text" placeholder="sk_live_..." /></td>
                 </tr>
-                <tr>
-                    <th>Stripe Webhook Secret</th>
-                    <td><input type="password" name="bsa_stripe_webhook_secret" value="<?php echo esc_attr(get_option('bsa_stripe_webhook_secret', '')); ?>" class="regular-text" placeholder="whsec_..." />
-                    <p class="description">Stripe Dashboard &rarr; Webhooks ka hel signing secret-ka. Webhook URL: <code><?php echo esc_url(rest_url('bsa/v1/stripe-webhook')); ?></code></p></td>
+                <tr style="background: #f0fdf4;">
+                    <th style="font-weight: bold;">Stripe Webhook Secret</th>
+                    <td>
+                        <?php $webhook_secret = get_option('bsa_stripe_webhook_secret', ''); ?>
+                        <input type="password" name="bsa_stripe_webhook_secret" value="<?php echo esc_attr($webhook_secret); ?>" class="regular-text" placeholder="whsec_..." />
+                        <?php if (empty($webhook_secret)): ?>
+                            <p style="color: #dc2626; font-weight: bold;">&#9888; Webhook Secret ma la gelin! Stripe webhooks ma shaqayn doonaan.</p>
+                        <?php else: ?>
+                            <p style="color: #16a34a; font-weight: bold;">&#10004; Webhook Secret waa la geliyay.</p>
+                        <?php endif; ?>
+                        <ol class="description" style="margin:6px 0 0 1.2em;padding:0;">
+                            <li>Stripe Dashboard &rarr; Developers &rarr; Webhooks &rarr; <strong>Add endpoint</strong></li>
+                            <li>Webhook URL-kan ku geli: <code style="background:#f3f4f6;padding:2px 6px;"><?php echo esc_url(rest_url('bsa/v1/stripe-webhook')); ?></code></li>
+                            <li>Event: <code>checkout.session.completed</code> dooro</li>
+                            <li>&ldquo;Signing secret&rdquo; ka hel (<code>whsec_...</code>) oo halkan ku geli</li>
+                        </ol>
+                    </td>
                 </tr>
                 <tr><td colspan="2"><hr style="border-top: 2px solid #e5e7eb;"></td></tr>
                 <tr>
