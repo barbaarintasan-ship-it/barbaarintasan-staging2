@@ -3,17 +3,51 @@ import { Link, useLocation } from "wouter";
 import { useParentAuth } from "@/contexts/ParentAuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Eye, EyeOff, ExternalLink } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import logoImage from "@assets/NEW_LOGO-BSU_1_1768990258338.png";
 
-const WORDPRESS_REGISTER_URL = "https://barbaarintasan.com/my-account/";
+const COUNTRIES = [
+  { value: "somalia", label: "🇸🇴 Soomaaliya" },
+  { value: "djibouti", label: "🇩🇯 Jabuuti" },
+  { value: "ethiopia", label: "🇪🇹 Itoobiya" },
+  { value: "kenya", label: "🇰🇪 Kenya" },
+  { value: "uganda", label: "🇺🇬 Uganda" },
+  { value: "tanzania", label: "🇹🇿 Tanzania" },
+  { value: "eritrea", label: "🇪🇷 Eritrea" },
+  { value: "sudan", label: "🇸🇩 Suudaan" },
+  { value: "south_sudan", label: "🇸🇸 Suudaan Koonfur" },
+  { value: "egypt", label: "🇪🇬 Masar" },
+  { value: "uk", label: "🇬🇧 Ingiriiska" },
+  { value: "usa", label: "🇺🇸 Maraykanka" },
+  { value: "canada", label: "🇨🇦 Kanada" },
+  { value: "sweden", label: "🇸🇪 Iswiidhan" },
+  { value: "norway", label: "🇳🇴 Noorweey" },
+  { value: "denmark", label: "🇩🇰 Denmark" },
+  { value: "finland", label: "🇫🇮 Finland" },
+  { value: "netherlands", label: "🇳🇱 Holland" },
+  { value: "germany", label: "🇩🇪 Jarmalka" },
+  { value: "france", label: "🇫🇷 Faransiiska" },
+  { value: "italy", label: "🇮🇹 Talyaaniga" },
+  { value: "belgium", label: "🇧🇪 Beljiyam" },
+  { value: "switzerland", label: "🇨🇭 Swiiserlaand" },
+  { value: "austria", label: "🇦🇹 Osteeriya" },
+  { value: "ireland", label: "🇮🇪 Irlandia" },
+  { value: "spain", label: "🇪🇸 Isbaaniya" },
+  { value: "portugal", label: "🇵🇹 Bortuqaal" },
+  { value: "saudi", label: "🇸🇦 Sacuudi Carabiya" },
+  { value: "uae", label: "🇦🇪 Imaaraadka" },
+  { value: "qatar", label: "🇶🇦 Qadar" },
+  { value: "kuwait", label: "🇰🇼 Kuwait" },
+  { value: "australia", label: "🇦🇺 Awsteeraaliya" },
+  { value: "other", label: "🌍 Wadan Kale" },
+];
 
 export default function Register() {
   const { t } = useTranslation();
   const [location, setLocation] = useLocation();
-  const { loginWithEmail } = useParentAuth();
+  const { loginWithEmail, registerWithEmail } = useParentAuth();
   
   const urlParams = new URLSearchParams(window.location.search);
   const redirectUrl = urlParams.get("redirect") || "/";
@@ -24,9 +58,18 @@ export default function Register() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
-  const [formData, setFormData] = useState({
+  const [loginData, setLoginData] = useState({
     email: "",
     password: "",
+  });
+
+  const [registerData, setRegisterData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    phone: "",
+    country: "",
+    city: "",
   });
 
   const handleGoogleLogin = async () => {
@@ -48,12 +91,12 @@ export default function Register() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      await loginWithEmail(formData.email, formData.password);
+      await loginWithEmail(loginData.email, loginData.password);
       toast.success(t("auth.loginSuccess"));
       
       if (returnUrl && (returnUrl.startsWith("https://barbaarintasan.com") || returnUrl.startsWith("https://www.barbaarintasan.com"))) {
@@ -68,8 +111,26 @@ export default function Register() {
     }
   };
 
-  const handleWordPressRegister = () => {
-    window.open(WORDPRESS_REGISTER_URL, "_blank");
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      await registerWithEmail(
+        registerData.email,
+        registerData.password,
+        registerData.name,
+        registerData.phone,
+        registerData.country,
+        registerData.city || undefined,
+      );
+      toast.success(t("auth.registerSuccess"));
+      setLocation(redirectUrl);
+    } catch (error: any) {
+      toast.error(error.message || t("auth.error"));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isLogin) {
@@ -83,25 +144,96 @@ export default function Register() {
                 Sameyso Akoon
               </h1>
               <p className="text-gray-500 mt-2 text-sm">
-                Is-diiwaangelinta waxay ka dhacaysaa websaydka barbaarintasan.com
+                Abuur akoon cusub oo bilaash ah
               </p>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
-              <div className="text-center space-y-4">
-                <p className="text-gray-700 text-sm leading-relaxed">
-                  Si aad akoon u sameyso, fadlan booqo websaydkeena barbaarintasan.com oo halkaas iska diiwaangeli. Ka dib marka aad is diiwaangeliso, soo noqo halkan oo ku gal email-kaaga iyo password-kaaga.
-                </p>
-                <Button
-                  onClick={handleWordPressRegister}
-                  className="w-full h-12 text-base font-bold bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center justify-center gap-2"
-                  data-testid="button-wordpress-register"
+            <form onSubmit={handleRegisterSubmit} className="space-y-4">
+              <Input
+                type="text"
+                value={registerData.name}
+                onChange={(e) => setRegisterData({ ...registerData, name: e.target.value })}
+                placeholder="Magacaaga oo buuxa"
+                required
+                className="h-12 text-base border-2 border-gray-300 rounded-lg px-4 placeholder:text-gray-400"
+                data-testid="input-name"
+              />
+
+              <Input
+                type="email"
+                value={registerData.email}
+                onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
+                placeholder="Email"
+                required
+                className="h-12 text-base border-2 border-gray-300 rounded-lg px-4 placeholder:text-gray-400"
+                data-testid="input-email"
+              />
+
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  value={registerData.password}
+                  onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
+                  placeholder="Password (6 xaraf ama ka badan)"
+                  required
+                  minLength={6}
+                  className="h-12 text-base border-2 border-gray-300 rounded-lg px-4 pr-10 placeholder:text-gray-400"
+                  data-testid="input-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
-                  <ExternalLink className="w-5 h-5" />
-                  Iska Diiwaangeli barbaarintasan.com
-                </Button>
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
-            </div>
+
+              <Input
+                type="tel"
+                value={registerData.phone}
+                onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
+                placeholder="Taleefanka (+252...)"
+                required
+                className="h-12 text-base border-2 border-gray-300 rounded-lg px-4 placeholder:text-gray-400"
+                data-testid="input-phone"
+              />
+
+              <select
+                value={registerData.country}
+                onChange={(e) => setRegisterData({ ...registerData, country: e.target.value })}
+                required
+                className="w-full h-12 text-base border-2 border-gray-300 rounded-lg px-4 bg-white text-gray-700 focus:outline-none focus:border-blue-500"
+                data-testid="select-country"
+              >
+                <option value="" disabled>Dooro wadankaaga</option>
+                {COUNTRIES.map((c) => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+
+              <Input
+                type="text"
+                value={registerData.city}
+                onChange={(e) => setRegisterData({ ...registerData, city: e.target.value })}
+                placeholder="Magaalada (ikhtiyaari)"
+                className="h-12 text-base border-2 border-gray-300 rounded-lg px-4 placeholder:text-gray-400"
+                data-testid="input-city"
+              />
+
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-12 text-base font-bold bg-blue-600 hover:bg-blue-700 rounded-lg"
+                data-testid="button-submit"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  "Sameyso Akoon"
+                )}
+              </Button>
+            </form>
 
             <div className="mt-8 pt-6 border-t border-gray-200 text-center">
               <p className="text-gray-600 text-sm">
@@ -164,11 +296,11 @@ export default function Register() {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleLoginSubmit} className="space-y-4">
             <Input
               type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              value={loginData.email}
+              onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
               placeholder="Email"
               required
               className="h-12 text-base border-2 border-gray-300 rounded-lg px-4 placeholder:text-gray-400"
@@ -178,8 +310,8 @@ export default function Register() {
             <div className="relative">
               <Input
                 type={showPassword ? "text" : "password"}
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                value={loginData.password}
+                onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                 placeholder="Password"
                 required
                 minLength={6}
@@ -223,7 +355,7 @@ export default function Register() {
             <p className="text-gray-600 text-sm">
               Akoon ma haysatid?{" "}
               <button
-                onClick={handleWordPressRegister}
+                onClick={() => { setIsLogin(false); setLocation("/register"); }}
                 className="text-blue-600 font-semibold hover:underline"
                 data-testid="button-switch-register"
               >
